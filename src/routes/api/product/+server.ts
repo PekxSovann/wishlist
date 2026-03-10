@@ -9,15 +9,27 @@ import { parseAcceptLanguageHeader } from "$lib/i18n";
 import { getFormatter } from "$lib/server/i18n";
 import { requireLoginOrError } from "$lib/server/auth";
 import { logger } from "$lib/server/logger";
+import { env } from "$env/dynamic/private";
 
 const scraper = metascraper([shopping(), metascraperTitle(), metascraperImage()]);
 type ProductDiagnostic = {
     fallback: true;
-    reason: "captcha_blocked" | "fetch_failed" | "scraper_failed";
+    reason: "captcha_blocked" | "fetch_failed" | "scraper_failed" | "playwright_failed";
     message: string;
     status?: number;
     stage?: "fetch" | "scrape";
     hostname: string;
+};
+
+const PLAYWRIGHT_HOSTS = new Set(
+    (env.PRODUCT_SCRAPE_PLAYWRIGHT_HOSTS || "yuyu-tei.jp")
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
+);
+
+const shouldUsePlaywright = (hostname: string) => {
+    return (env.PRODUCT_SCRAPE_PLAYWRIGHT || "false") === "true" && PLAYWRIGHT_HOSTS.has(hostname.toLowerCase());
 };
 
 // const goShopping = async (targetUrl: URL, locales: string[]) => {
@@ -59,6 +71,43 @@ const goShopping = async (targetUrl: URL, locales: string[]) => {
     return scraper({ html, url: resp.url });
 };
 
+const goShoppingWithPlaywright = async (targetUrl: URL, locales: string[]) => {
+    let browser: { close: () => Promise<void> } | undefined;
+    try {
+        let chromium: any;
+        try {
+            chromium = (await import("playwright")).chromium;
+        } catch {
+            chromium = (await import("@playwright/test")).chromium;
+        }
+        if (!chromium) throw new Error("Playwright chromium not available");
+
+        const wsEndpoint = env.PLAYWRIGHT_WS_ENDPOINT;
+        browser = wsEndpoint
+            ? await chromium.connect(wsEndpoint)
+            : await chromium.launch({
+                  headless: true,
+                  args: ["--no-sandbox", "--disable-setuid-sandbox"]
+              });
+
+        const context = await browser.newContext({
+            locale: locales[0] || "ja-JP",
+            userAgent:
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        });
+        const page = await context.newPage();
+        await page.goto(targetUrl.toString(), { waitUntil: "domcontentloaded", timeout: 20000 });
+        await page.waitForTimeout(1200);
+
+        const html = await page.content();
+        const metadata = await scraper({ html, url: page.url() });
+        await context.close();
+        return metadata;
+    } finally {
+        await browser?.close();
+    }
+};
+
 const isCaptchaResponse = (metadata: Metadata) => {
     return metadata.image && metadata.image.toLocaleLowerCase().indexOf("captcha") >= 0;
 };
@@ -98,6 +147,13 @@ export const GET: RequestHandler = async ({ request, url }) => {
                 // retry with the resolved URL
                 metadata = await getUrlOrError(metadata.url).then((url) => goShopping(url, locales));
             }
+            if (isCaptchaResponse(metadata) && shouldUsePlaywright(targetUrl.hostname)) {
+                try {
+                    metadata = await goShoppingWithPlaywright(targetUrl, locales);
+                } catch (pwErr) {
+                    logger.warn({ pwErr, targetUrl: targetUrl.toString() }, "Playwright fallback failed after captcha");
+                }
+            }
             if (isCaptchaResponse(metadata)) {
                 logger.warn({ targetUrl: targetUrl.toString() }, "Product metadata blocked by captcha, using fallback");
                 return makeFallback(targetUrl, {
@@ -124,6 +180,28 @@ export const GET: RequestHandler = async ({ request, url }) => {
             const errMsg = err instanceof Error ? err.message : String(err);
             const fetchStatus = errMsg.match(/Unable to fetch url: (\d+)/)?.[1];
             const status = fetchStatus ? Number.parseInt(fetchStatus) : undefined;
+
+            if (status === 403 && shouldUsePlaywright(targetUrl.hostname)) {
+                try {
+                    const metadata = await goShoppingWithPlaywright(targetUrl, locales);
+                    if (metadata.url == metadata.image) {
+                        metadata.url = targetUrl.toString();
+                    }
+                    return new Response(JSON.stringify(metadata));
+                } catch (pwErr) {
+                    logger.warn({ pwErr, targetUrl: targetUrl.toString() }, "Playwright fallback failed after 403");
+                    return makeFallback(targetUrl, {
+                        fallback: true,
+                        reason: "playwright_failed",
+                        message:
+                            "Remote site blocked direct fetch (403) and Playwright fallback failed. Fill item details manually.",
+                        stage: "fetch",
+                        status,
+                        hostname: targetUrl.hostname
+                    });
+                }
+            }
+
             return makeFallback(targetUrl, {
                 fallback: true,
                 reason: fetchStatus ? "fetch_failed" : "scraper_failed",
