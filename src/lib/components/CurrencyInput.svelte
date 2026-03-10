@@ -12,9 +12,10 @@
         name: string;
         id: string;
         disabled?: boolean;
+        zIndex?: string;
     }
 
-    let { value = $bindable(null), currency = $bindable("USD"), name, id, disabled = false }: Props = $props();
+    let { value = $bindable(null), currency = $bindable("USD"), name, id, disabled = false, zIndex = "z-30!" }: Props = $props();
     const t = getFormatter();
 
     let formatter = $derived(getPriceFormatter(currency));
@@ -189,7 +190,7 @@
             <Combobox.Trigger />
         </Combobox.Control>
         <Portal>
-            <Combobox.Positioner class="z-30!">
+            <Combobox.Positioner class={zIndex}>
                 <Combobox.Content class="h-64 w-[10ch] overflow-auto">
                     {#if filteredCurrencies.length === 0}
                         <div class="px-2 py-1 text-xs opacity-70">No matches</div>

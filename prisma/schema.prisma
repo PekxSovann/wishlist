@@ -26,6 +26,7 @@ model User {
     lists               List[]
     preferredLanguage   String?
     managedLists        ListManager[]
+    buyerNotes          ItemBuyerNote[]
 
     @@map("user")
 }
@@ -132,9 +133,25 @@ model Item {
     createdById String
     lists       ListItem[]
     claims      ItemClaim[]
+    buyerNotes  ItemBuyerNote[]
 
     @@index([userId])
     @@map("items")
+}
+
+model ItemBuyerNote {
+    id        String   @id @unique @default(uuid())
+    item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+    itemId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId    String
+    note      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([itemId, userId])
+    @@index([itemId])
+    @@map("item_buyer_note")
 }
 
 model ItemPrice {
@@ -177,6 +194,7 @@ model ItemClaim {
     quantity          Int         @default(1)
     claimedPrice      Int?
     claimedCurrency   String?
+    claimedNote       String?
     receivedAmount    Int         @default(0)
 
     @@index([itemId])

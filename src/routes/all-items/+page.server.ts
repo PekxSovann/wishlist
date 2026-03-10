@@ -59,6 +59,7 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
                     quantity: true,
                     claimedPrice: true,
                     claimedCurrency: true,
+                    claimedNote: true,
                     claimedBy: {
                         select: {
                             id: true,
@@ -80,6 +81,19 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
                 where: {
                     list: {
                         groupId: activeMembership.groupId
+                    }
+                }
+            },
+            buyerNotes: {
+                select: {
+                    id: true,
+                    note: true,
+                    userId: true,
+                    user: {
+                        select: {
+                            id: true,
+                            name: true
+                        }
                     }
                 }
             },

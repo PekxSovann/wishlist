@@ -10,6 +10,7 @@ type BaseClaim = {
     claimId: string;
     quantity: number;
     listId: string;
+    claimedNote?: string;
     claimedPrice?: {
         value: number;
         currency: string;
@@ -36,6 +37,12 @@ interface ListItem {
     approved: boolean;
     displayOrder: number | null;
     claims: ClaimDTO[];
+    buyerNotes?: {
+        id: string;
+        userId: string;
+        userName: string;
+        note: string;
+    }[];
 }
 
 export interface ItemOnListDTO extends Item, ListItem {

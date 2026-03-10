@@ -9,6 +9,7 @@
     import BaseModal, { type BaseModalProps } from "./BaseModal.svelte";
     import { Dialog } from "@skeletonlabs/skeleton-svelte";
     import { formatPlainNumber, formatPrice, getDefaultCurrency, getPriceValue } from "$lib/price-formatter";
+    import CurrencyInput from "../CurrencyInput.svelte";
 
     interface Props extends Omit<BaseModalProps, "title" | "description" | "actions" | "children" | "element"> {
         item: ItemOnListDTO;
@@ -45,7 +46,8 @@
     let name: string | undefined = $state();
     let quantity = $state(1);
     let error: string | undefined = $state();
-    let manualClaimCurrency = $state<string | null>(null);
+    const fallbackCurrency = getDefaultCurrency();
+    let manualClaimCurrency = $state<string>(fallbackCurrency);
     const desiredPrice = $derived(getPriceValue(item));
     const currentClaimPrice = $derived.by(() => {
         if (!claim?.claimedPrice) {
@@ -58,9 +60,12 @@
     let skipMismatchCheck = $state(false);
     let confirmedMismatchPrice = $state<number | null>(null);
     let submitting = $state(false);
-    const fallbackCurrency = getDefaultCurrency();
     const claimCurrency = $derived(
-        manualClaimCurrency ?? item.itemPrice?.currency ?? claim?.claimedPrice?.currency ?? fallbackCurrency ?? null
+        getNormalizedCurrencyCode(manualClaimCurrency) ??
+            item.itemPrice?.currency ??
+            claim?.claimedPrice?.currency ??
+            fallbackCurrency ??
+            null
     );
     const userClaimOccurrences = $derived.by(() => item.claims.filter((c) => c.claimedBy?.id === userId));
     let occurrencePriceDrafts = $state<Record<string, number>>({});
@@ -105,7 +110,7 @@
         }
         skipMismatchCheck = false;
         confirmedMismatchPrice = null;
-        manualClaimCurrency = null;
+        manualClaimCurrency = claim?.claimedPrice?.currency ?? item.itemPrice?.currency ?? fallbackCurrency;
         occurrencePriceDrafts = Object.fromEntries(
             userClaimOccurrences.map((c) => [c.claimId, c.claimedPrice?.value ?? desiredPrice ?? 0])
         );
@@ -129,12 +134,17 @@
         error = undefined;
 
         const effectiveClaimPrice = claimPrice ?? desiredPrice;
+        const effectiveClaimCurrency = getNormalizedCurrencyCode(claimCurrency);
 
         if (!Number.isFinite(quantity) || quantity < 0) {
             error = $t("general.oops");
             return;
         }
         if (effectiveClaimPrice !== null && (!Number.isFinite(effectiveClaimPrice) || effectiveClaimPrice < 0)) {
+            error = $t("general.oops");
+            return;
+        }
+        if (effectiveClaimPrice !== null && !effectiveClaimCurrency) {
             error = $t("general.oops");
             return;
         }
@@ -194,8 +204,14 @@
         return text || $t("general.oops");
     }
 
+    function getNormalizedCurrencyCode(value: string | null | undefined): string | null {
+        if (!value) return null;
+        const normalized = value.trim().toUpperCase();
+        return /^[A-Z]{3}$/.test(normalized) ? normalized : null;
+    }
+
     function getClaimPricePayload() {
-        const rawCurrency = item.itemPrice?.currency ?? claim?.claimedPrice?.currency ?? fallbackCurrency;
+        const rawCurrency = getNormalizedCurrencyCode(claimCurrency) ?? fallbackCurrency;
         const rawPrice = claimPrice ?? currentClaimPrice ?? desiredPrice;
         if (rawPrice === null || !rawCurrency) {
             return { claimedPrice: null, claimedCurrency: null };
@@ -247,7 +263,9 @@
             return;
         }
 
-        const claimedCurrency = (occurrence.claimedPrice?.currency ?? claimCurrency ?? fallbackCurrency)?.toUpperCase();
+        const claimedCurrency = getNormalizedCurrencyCode(
+            occurrence.claimedPrice?.currency ?? claimCurrency ?? fallbackCurrency
+        );
         if (!claimedCurrency) {
             toaster.error({ description: $t("general.oops") });
             return;
@@ -393,9 +411,15 @@
         </div>
     {/if}
 
-    <label class="w-fit">
+    <label class="w-full">
         <span>{$t("wishes.price")}</span>
-        <input class="input" inputmode="decimal" min="0" step="0.01" type="number" bind:value={claimPrice} />
+        <CurrencyInput
+            id={`claim-price-${item.id}`}
+            name={`claim-price-${item.id}`}
+            bind:value={claimPrice}
+            bind:currency={manualClaimCurrency}
+            zIndex="z-60!"
+        />
         {#if claim && userClaimOccurrences.length > 0}
             <div class="mt-2 flex w-full flex-col gap-2">
                 <span class="subtext">Your claims on this card:</span>

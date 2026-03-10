@@ -29,12 +29,21 @@ export class ClaimAPI {
         return await this._makeRequest("PATCH", { purchased: false });
     };
 
-    updateQuantity = async (quantity: number, claimedPrice?: number | null, claimedCurrency?: string | null) => {
-        return await this._makeRequest("PATCH", { quantity, claimedPrice, claimedCurrency });
+    updateQuantity = async (
+        quantity: number,
+        claimedPrice?: number | null,
+        claimedCurrency?: string | null,
+        claimedNote?: string | null
+    ) => {
+        return await this._makeRequest("PATCH", { quantity, claimedPrice, claimedCurrency, claimedNote });
     };
 
     updateReceivedAmount = async (receivedAmount: number) => {
         return await this._makeRequest("PATCH", { receivedAmount });
+    };
+
+    updateNote = async (claimedNote?: string | null) => {
+        return await this._makeRequest("PATCH", { claimedNote });
     };
 
     unclaim = async () => {

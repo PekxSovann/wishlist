@@ -115,7 +115,8 @@ export const listItemClaimSchema = z.object({
     claimedById: z.string().nullish(),
     publicClaimedById: z.string().nullish(),
     claimedPrice: z.number().int().nullish(),
-    claimedCurrency: z.string().length(3).nullish()
+    claimedCurrency: z.string().length(3).nullish(),
+    claimedNote: z.string().max(5000).nullish()
 });
 
 export const listItemClaimUpdateSchema = z.object({
@@ -123,6 +124,7 @@ export const listItemClaimUpdateSchema = z.object({
     quantity: z.number().optional(),
     claimedPrice: z.number().int().nullish(),
     claimedCurrency: z.string().length(3).nullish(),
+    claimedNote: z.string().max(5000).nullish(),
     receivedAmount: z.number().int().min(0).nullish()
 });
 

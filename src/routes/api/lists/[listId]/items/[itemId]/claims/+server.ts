@@ -100,7 +100,8 @@ export const PUT: RequestHandler = async ({ locals, request, params }) => {
             },
             quantity: updateData.data.quantity,
             claimedPrice: updateData.data.claimedPrice,
-            claimedCurrency
+            claimedCurrency,
+            claimedNote: updateData.data.claimedNote?.trim() || null
         };
         if (updateData.data.claimedById) {
             data.claimedBy = {

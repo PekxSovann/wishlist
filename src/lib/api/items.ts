@@ -21,6 +21,18 @@ export class ItemAPI {
     delete = async () => {
         return await this._makeRequest("DELETE");
     };
+
+    updateBuyerNote = async (note?: string | null) => {
+        const options: RequestInit = {
+            method: "PATCH",
+            headers: {
+                "content-type": "application/json",
+                accept: "application/json"
+            },
+            body: JSON.stringify({ note })
+        };
+        return await fetch(`/api/items/${this.itemId}/note`, options);
+    };
 }
 
 export class ItemsAPI {

@@ -3,6 +3,7 @@
     import { getFormatter } from "$lib/i18n";
     import { getClaimedName, shouldShowName } from "../util";
     import ClaimItemModal from "$lib/components/modals/ClaimItemModal.svelte";
+    import BuyerNoteModal from "$lib/components/modals/BuyerNoteModal.svelte";
     import { ClaimAPI } from "$lib/api/claims";
     import { toaster } from "$lib/components/toaster";
 
@@ -32,6 +33,7 @@
     const t = getFormatter();
 
     const userClaim = $derived(item.claims.find((claim) => claim.claimedBy && claim.claimedBy.id === user?.id));
+    const userBuyerNote = $derived(item.buyerNotes?.find((buyerNote) => buyerNote.userId === user?.id));
     const isClaimOnList = $derived(userClaim?.listId === item.listId);
     const canClaimAnother = $derived(
         Boolean(
@@ -53,22 +55,43 @@
             }
         }
     };
+
+    const onBuyerNoteSaved = (note: string | null) => {
+        if (!item.buyerNotes) {
+            item.buyerNotes = [];
+        }
+        const existing = item.buyerNotes.find((buyerNote) => buyerNote.userId === user?.id);
+        if (note) {
+            if (existing) {
+                existing.note = note;
+            } else if (user?.id && user.name) {
+                item.buyerNotes.push({ id: crypto.randomUUID(), userId: user.id, userName: user.name, note });
+            }
+        } else if (existing) {
+            item.buyerNotes = item.buyerNotes.filter((buyerNote) => buyerNote.userId !== user?.id);
+        }
+    };
 </script>
 
 {#if !onPublicList && item.userId === user?.id && !showClaimForOwner}
     <div></div>
 {:else if userClaim}
     {#if isClaimOnList}
-        <div class="flex flex-row items-center gap-2">
+        <div class="flex flex-wrap items-center gap-1.5">
             <ClaimItemModal claimId={userClaim.claimId} {groupId} {item} {requireClaimEmail} userId={user?.id}>
                 {#snippet trigger(props)}
                     <button
                         {...props}
-                        class="preset-tonal-secondary inset-ring-secondary-500 btn btn-sm md:btn inset-ring"
+                        class="preset-tonal-secondary inset-ring-secondary-500 btn btn-xs md:btn-sm inset-ring"
                     >
-                        {item.quantity === 1 && userClaim.quantity === 1
-                            ? $t("wishes.unclaim")
-                            : $t("wishes.update-claim")}
+                        <span class="md:hidden">
+                            <iconify-icon icon="ion:create-outline"></iconify-icon>
+                        </span>
+                        <span class="hidden md:inline">
+                            {item.quantity === 1 && userClaim.quantity === 1
+                                ? $t("wishes.unclaim")
+                                : $t("wishes.update-claim")}
+                        </span>
                     </button>
                 {/snippet}
             </ClaimItemModal>
@@ -81,15 +104,26 @@
                     userId={user?.id}
                 >
                     {#snippet trigger(props)}
-                        <button {...props} class="btn btn-sm md:btn inset-ring-secondary-500 inset-ring">
-                            Claim another one
+                        <button {...props} class="btn btn-xs md:btn-sm inset-ring-secondary-500 inset-ring">
+                            <span class="md:hidden">+1</span>
+                            <span class="hidden md:inline">Claim another one</span>
                         </button>
                     {/snippet}
                 </ClaimItemModal>
             {/if}
+            <BuyerNoteModal itemId={item.id} note={userBuyerNote?.note} onSaved={onBuyerNoteSaved}>
+                {#snippet trigger(props)}
+                    <button {...props} class="btn btn-xs md:btn-sm inset-ring-secondary-500 inset-ring">
+                        <span class="md:hidden">
+                            <iconify-icon icon="ion:document-text-outline"></iconify-icon>
+                        </span>
+                        <span class="hidden md:inline">{userBuyerNote?.note ? "Edit note" : "Add note"}</span>
+                    </button>
+                {/snippet}
+            </BuyerNoteModal>
             <button
                 class={[
-                    "btn btn-icon btn-icon-sm md:btn-icon-base",
+                    "btn btn-icon btn-icon-sm",
                     userClaim.purchased && "preset-tonal-secondary inset-ring-secondary-500 inset-ring",
                     !userClaim.purchased && "inset-ring-secondary-500 inset-ring"
                 ]}
@@ -115,6 +149,16 @@
                 </button>
             {/snippet}
         </ClaimItemModal>
+        <BuyerNoteModal itemId={item.id} note={userBuyerNote?.note} onSaved={onBuyerNoteSaved}>
+            {#snippet trigger(props)}
+                <button {...props} class="btn btn-xs md:btn-sm inset-ring-secondary-500 inset-ring">
+                    <span class="md:hidden">
+                        <iconify-icon icon="ion:document-text-outline"></iconify-icon>
+                    </span>
+                    <span class="hidden md:inline">{userBuyerNote?.note ? "Edit note" : "Add note"}</span>
+                </button>
+            {/snippet}
+        </BuyerNoteModal>
     </div>
 {:else if item.claims.length === 0 || (item.userId === user?.id && item.isClaimable)}
     <div></div>

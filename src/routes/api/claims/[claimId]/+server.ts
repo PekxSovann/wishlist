@@ -67,6 +67,7 @@ export const PATCH: RequestHandler = async ({ request, params }) => {
         const hasClaimedPriceUpdate = updateData.data.claimedPrice !== null && updateData.data.claimedPrice !== undefined;
         const hasClaimedCurrencyUpdate =
             updateData.data.claimedCurrency !== null && updateData.data.claimedCurrency !== undefined;
+        const hasClaimedNoteUpdate = updateData.data.claimedNote !== null && updateData.data.claimedNote !== undefined;
         const hasReceivedAmountUpdate =
             updateData.data.receivedAmount !== null && updateData.data.receivedAmount !== undefined;
         const effectiveClaimedCurrency =
@@ -74,7 +75,14 @@ export const PATCH: RequestHandler = async ({ request, params }) => {
             claim.claimedCurrency?.toUpperCase() ??
             claim.item.itemPrice?.currency?.toUpperCase();
 
-        if (hasPurchasedUpdate || hasQuantityUpdate || hasClaimedPriceUpdate || hasClaimedCurrencyUpdate || hasReceivedAmountUpdate) {
+        if (
+            hasPurchasedUpdate ||
+            hasQuantityUpdate ||
+            hasClaimedPriceUpdate ||
+            hasClaimedCurrencyUpdate ||
+            hasClaimedNoteUpdate ||
+            hasReceivedAmountUpdate
+        ) {
             await client.itemClaim.update({
                 data: {
                     purchased:
@@ -88,6 +96,7 @@ export const PATCH: RequestHandler = async ({ request, params }) => {
                             : undefined,
                     claimedCurrency:
                         hasClaimedPriceUpdate || hasClaimedCurrencyUpdate ? (effectiveClaimedCurrency ?? undefined) : undefined,
+                    claimedNote: hasClaimedNoteUpdate ? (updateData.data.claimedNote?.trim() || null) : undefined,
                     receivedAmount: hasReceivedAmountUpdate ? (updateData.data.receivedAmount ?? undefined) : undefined
                 },
                 where: {

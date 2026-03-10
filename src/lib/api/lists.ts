@@ -71,16 +71,29 @@ export class ListItemAPI {
         return await this._makeRequest("DELETE");
     };
 
-    claim = async (claimedById: string, quantity: number, claimedPrice?: number | null, claimedCurrency?: string | null) => {
-        return await this._makeRequest("PUT", "/claims", { claimedById, quantity, claimedPrice, claimedCurrency });
+    claim = async (
+        claimedById: string,
+        quantity: number,
+        claimedPrice?: number | null,
+        claimedCurrency?: string | null,
+        claimedNote?: string | null
+    ) => {
+        return await this._makeRequest("PUT", "/claims", { claimedById, quantity, claimedPrice, claimedCurrency, claimedNote });
     };
 
     claimPublic = async (
         publicClaimedById: string,
         quantity: number,
         claimedPrice?: number | null,
-        claimedCurrency?: string | null
+        claimedCurrency?: string | null,
+        claimedNote?: string | null
     ) => {
-        return await this._makeRequest("PUT", "/claims", { publicClaimedById, quantity, claimedPrice, claimedCurrency });
+        return await this._makeRequest("PUT", "/claims", {
+            publicClaimedById,
+            quantity,
+            claimedPrice,
+            claimedCurrency,
+            claimedNote
+        });
     };
 }

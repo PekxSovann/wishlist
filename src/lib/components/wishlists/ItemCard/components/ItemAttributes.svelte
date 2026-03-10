@@ -27,6 +27,12 @@
     }: Props = $props();
 
     let expandClaims = $state(false);
+    const visibleBuyerNotes = $derived.by(() => {
+        const notes = item.buyerNotes || [];
+        if (!user?.id) return [];
+        if (item.userId === user.id) return notes;
+        return notes.filter((note) => note.userId === user.id);
+    });
 </script>
 
 <!-- Price with fallback -->
@@ -107,6 +113,20 @@
                 {/each}
             </div>
         {/if}
+    </div>
+{/if}
+
+{#if visibleBuyerNotes.length > 0}
+    <div class="card p-2 text-sm">
+        <div class="font-medium">Buyer notes</div>
+        <div class="mt-1 flex flex-col gap-2">
+            {#each visibleBuyerNotes as buyerNote}
+                <div class="flex flex-col">
+                    <span class="subtext">{buyerNote.userId === user?.id ? "You" : buyerNote.userName}</span>
+                    <span class="subtext whitespace-pre-wrap">{buyerNote.note}</span>
+                </div>
+            {/each}
+        </div>
     </div>
 {/if}
 

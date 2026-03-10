@@ -26,6 +26,7 @@ export const getItemInclusions = (listId?: string) => {
                 listId: true,
                 claimedPrice: true,
                 claimedCurrency: true,
+                claimedNote: true,
                 claimedBy: {
                     select: {
                         id: true,
@@ -38,6 +39,19 @@ export const getItemInclusions = (listId?: string) => {
                     }
                 },
                 publicClaimedBy: {
+                    select: {
+                        id: true,
+                        name: true
+                    }
+                }
+            }
+        },
+        buyerNotes: {
+            select: {
+                id: true,
+                note: true,
+                userId: true,
+                user: {
                     select: {
                         id: true,
                         name: true

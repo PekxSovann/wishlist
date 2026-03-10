@@ -1,6 +1,7 @@
 import type { ItemOnListDTO } from "$lib/dtos/item-dto";
 import type {
     Item,
+    ItemBuyerNote as PrismaItemBuyerNote,
     ListItem as PrismaListItem,
     ItemClaim as PrismaItemClaim,
     ItemPrice,
@@ -15,13 +16,21 @@ interface UserWithGroups extends MinimalUser {
     UserGroupMembership: Pick<UserGroupMembership, "groupId">[];
 }
 
-interface ItemClaim extends Pick<PrismaItemClaim, "id" | "purchased" | "quantity" | "listId" | "claimedPrice" | "claimedCurrency"> {
+interface ItemClaim
+    extends Pick<
+        PrismaItemClaim,
+        "id" | "purchased" | "quantity" | "listId" | "claimedPrice" | "claimedCurrency" | "claimedNote"
+    > {
     claimedBy: UserWithGroups | null;
     publicClaimedBy: Pick<SystemUser, "id" | "name"> | null;
 }
 
 interface ListItem extends Pick<PrismaListItem, "listId" | "approved" | "displayOrder"> {
     addedBy: MinimalUser;
+}
+
+interface BuyerNote extends Pick<PrismaItemBuyerNote, "id" | "userId" | "note"> {
+    user: MinimalUser;
 }
 
 interface ItemCount {
@@ -33,6 +42,7 @@ export interface FullItem extends Item {
     user: MinimalUser;
     lists: ListItem[];
     claims: ItemClaim[];
+    buyerNotes: BuyerNote[];
     _count: ItemCount;
 }
 
@@ -45,6 +55,12 @@ export const toItemOnListDTO = (item: FullItem, listId: string) => {
     return {
         ...restOfItem,
         ...list,
+        buyerNotes: item.buyerNotes.map((buyerNote) => ({
+            id: buyerNote.id,
+            userId: buyerNote.userId,
+            userName: buyerNote.user.name,
+            note: buyerNote.note
+        })),
         claims: claims.map((claim) => {
             if (claim.claimedBy) {
                 const { UserGroupMembership, ...user } = claim.claimedBy;
@@ -58,6 +74,7 @@ export const toItemOnListDTO = (item: FullItem, listId: string) => {
                     claimedBy,
                     purchased: claim.purchased,
                     listId: claim.listId,
+                    claimedNote: claim.claimedNote || undefined,
                     claimedPrice:
                         claim.claimedPrice !== null && claim.claimedCurrency
                             ? { value: claim.claimedPrice, currency: claim.claimedCurrency }
@@ -69,6 +86,7 @@ export const toItemOnListDTO = (item: FullItem, listId: string) => {
                 quantity: claim.quantity,
                 publicClaimedBy: claim.publicClaimedBy!,
                 listId: claim.listId,
+                claimedNote: claim.claimedNote || undefined,
                 claimedPrice:
                     claim.claimedPrice !== null && claim.claimedCurrency
                         ? { value: claim.claimedPrice, currency: claim.claimedCurrency }
