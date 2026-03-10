@@ -83,12 +83,20 @@ const goShoppingWithPlaywright = async (targetUrl: URL, locales: string[]) => {
         if (!chromium) throw new Error("Playwright chromium not available");
 
         const wsEndpoint = env.PLAYWRIGHT_WS_ENDPOINT;
-        browser = wsEndpoint
-            ? await chromium.connect(wsEndpoint)
-            : await chromium.launch({
-                  headless: true,
-                  args: ["--no-sandbox", "--disable-setuid-sandbox"]
-              });
+        if (wsEndpoint) {
+            try {
+                // Browserless-style endpoints expect CDP.
+                browser = await chromium.connectOverCDP(wsEndpoint);
+            } catch (cdpErr) {
+                logger.warn({ cdpErr, wsEndpoint }, "connectOverCDP failed, retrying with chromium.connect");
+                browser = await chromium.connect(wsEndpoint);
+            }
+        } else {
+            browser = await chromium.launch({
+                headless: true,
+                args: ["--no-sandbox", "--disable-setuid-sandbox"]
+            });
+        }
 
         const context = await browser.newContext({
             locale: locales[0] || "ja-JP",
