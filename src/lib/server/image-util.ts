@@ -1,11 +1,9 @@
 import sharp from "sharp";
-import { mkdir, unlink } from "fs/promises";
+import { unlink } from "fs/promises";
 import { logger } from "$lib/server/logger";
 import { getRequestEvent } from "$app/server";
 import { Readable } from "stream";
 import { finished } from "stream/promises";
-import { ReadableStream } from "stream/web";
-import { createWriteStream } from "node:fs";
 import { error } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
 
@@ -64,23 +62,16 @@ export const createImage = async (filename: string, image: File | string | null 
     }
 
     try {
-        let failure = false;
-        const fname = slugify(filename) + "-" + Date.now().toString() + ".webp";
-        await mkdir("uploads", { recursive: true });
-        const writeStream = createWriteStream(`uploads/${fname}`);
-        const transformer = sharp()
-            .rotate()
-            .resize(300)
-            .webp()
-            .on("error", (err) => {
-                logger.error({ err }, "Unable to transform image");
-                failure = true;
-            });
-        await finished(dataStream.pipe(transformer).pipe(writeStream));
+        const chunks: Buffer[] = [];
+        dataStream.on("data", (chunk) => {
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        });
+        await finished(dataStream);
 
-        if (!failure) return fname;
+        const webp = await sharp(Buffer.concat(chunks)).rotate().resize(300).webp().toBuffer();
+        return `data:image/webp;base64,${webp.toString("base64")}`;
     } catch (err) {
-        logger.error({ err }, "Unable to write image to file");
+        logger.error({ err, filename: slugify(filename) }, "Unable to process image");
     }
 
     error(422, "Unable to process image");

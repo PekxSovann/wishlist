@@ -11,10 +11,21 @@
     }
 
     let { user, ...props }: Props = $props();
+
+    const avatarSrc = $derived.by(() => {
+        if (!user?.picture) return null;
+
+        try {
+            new URL(user.picture);
+            return user.picture;
+        } catch {
+            return `/api/assets/${user.picture}`;
+        }
+    });
 </script>
 
 <Avatar {...props}>
-    <Avatar.Image src={user?.picture ? `/api/assets/${user.picture}` : null}></Avatar.Image>
+    <Avatar.Image src={avatarSrc}></Avatar.Image>
     <Avatar.Fallback class="preset-filled-primary-500">
         {user?.name.split(" ").reduce((x, y) => x + y.at(0), "")}
     </Avatar.Fallback>

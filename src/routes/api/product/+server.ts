@@ -1,4 +1,4 @@
-import { error } from "@sveltejs/kit";
+import { error, isHttpError } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
 import metascraper, { type Metadata } from "metascraper";
@@ -8,6 +8,7 @@ import shopping from "$lib/server/shopping";
 import { parseAcceptLanguageHeader } from "$lib/i18n";
 import { getFormatter } from "$lib/server/i18n";
 import { requireLoginOrError } from "$lib/server/auth";
+import { logger } from "$lib/server/logger";
 
 const scraper = metascraper([shopping(), metascraperTitle(), metascraperImage()]);
 
@@ -49,22 +50,31 @@ export const GET: RequestHandler = async ({ request, url }) => {
     const locales = parseAcceptLanguageHeader(acceptLanguage);
 
     if (encodedUrl) {
-        const targetUrl = await getUrlOrError(decodeURI(encodedUrl));
+        try {
+            const targetUrl = await getUrlOrError(encodedUrl);
 
-        let metadata = await goShopping(targetUrl, locales);
-        if (isCaptchaResponse(metadata) && metadata.url) {
-            // retry with the resolved URL
-            metadata = await getUrlOrError(metadata.url).then((url) => goShopping(url, locales));
-        }
-        if (isCaptchaResponse(metadata)) {
+            let metadata = await goShopping(targetUrl, locales);
+            if (isCaptchaResponse(metadata) && metadata.url) {
+                // retry with the resolved URL
+                metadata = await getUrlOrError(metadata.url).then((url) => goShopping(url, locales));
+            }
+            if (isCaptchaResponse(metadata)) {
+                error(424, $t("errors.product-information-not-available"));
+            }
+
+            if (metadata.url == metadata.image) {
+                metadata.url = targetUrl.toString();
+            }
+
+            return new Response(JSON.stringify(metadata));
+        } catch (err) {
+            if (isHttpError(err)) {
+                throw err;
+            }
+
+            logger.warn({ err, targetUrl: encodedUrl }, "Unable to fetch product metadata");
             error(424, $t("errors.product-information-not-available"));
         }
-
-        if (metadata.url == metadata.image) {
-            metadata.url = targetUrl.toString();
-        }
-
-        return new Response(JSON.stringify(metadata));
     } else {
         error(400, $t("errors.must-specify-url-in-query-parameters"));
     }
