@@ -103,6 +103,7 @@
             "esbuild",
             "prisma",
             "re2",
+            "sharp",
             "svelte-preprocess",
             "@tailwindcss/oxide"
         ]
