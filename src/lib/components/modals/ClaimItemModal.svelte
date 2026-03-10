@@ -8,7 +8,7 @@
     import { toaster } from "../toaster";
     import BaseModal, { type BaseModalProps } from "./BaseModal.svelte";
     import { Dialog } from "@skeletonlabs/skeleton-svelte";
-    import { formatPlainNumber, formatPrice, getPriceValue } from "$lib/price-formatter";
+    import { formatPlainNumber, formatPrice, getDefaultCurrency, getPriceValue } from "$lib/price-formatter";
 
     interface Props extends Omit<BaseModalProps, "title" | "description" | "actions" | "children" | "element"> {
         item: ItemOnListDTO;
@@ -45,6 +45,7 @@
     let name: string | undefined = $state();
     let quantity = $state(1);
     let error: string | undefined = $state();
+    let manualClaimCurrency = $state<string | null>(null);
     const desiredPrice = $derived(getPriceValue(item));
     const currentClaimPrice = $derived.by(() => {
         if (!claim?.claimedPrice) {
@@ -57,7 +58,13 @@
     let skipMismatchCheck = $state(false);
     let confirmedMismatchPrice = $state<number | null>(null);
     let submitting = $state(false);
-    const claimCurrency = $derived(item.itemPrice?.currency ?? null);
+    const fallbackCurrency = getDefaultCurrency();
+    const claimCurrency = $derived(
+        manualClaimCurrency ?? item.itemPrice?.currency ?? claim?.claimedPrice?.currency ?? fallbackCurrency ?? null
+    );
+    const userClaimOccurrences = $derived.by(() => item.claims.filter((c) => c.claimedBy?.id === userId));
+    let occurrencePriceDrafts = $state<Record<string, number>>({});
+    let occurrenceSaving = $state<Record<string, boolean>>({});
     const previewTotal = $derived.by(() => {
         if (claimPrice === null || !claimCurrency || !Number.isFinite(quantity)) {
             return null;
@@ -98,6 +105,11 @@
         }
         skipMismatchCheck = false;
         confirmedMismatchPrice = null;
+        manualClaimCurrency = null;
+        occurrencePriceDrafts = Object.fromEntries(
+            userClaimOccurrences.map((c) => [c.claimId, c.claimedPrice?.value ?? desiredPrice ?? 0])
+        );
+        occurrenceSaving = {};
         if (!userId) {
             open = true;
             return;
@@ -183,7 +195,7 @@
     }
 
     function getClaimPricePayload() {
-        const rawCurrency = item.itemPrice?.currency ?? claim?.claimedPrice?.currency;
+        const rawCurrency = item.itemPrice?.currency ?? claim?.claimedPrice?.currency ?? fallbackCurrency;
         const rawPrice = claimPrice ?? currentClaimPrice ?? desiredPrice;
         if (rawPrice === null || !rawCurrency) {
             return { claimedPrice: null, claimedCurrency: null };
@@ -222,6 +234,46 @@
         } else {
             onFailure?.();
             toaster.error({ description: await getResponseError(resp) });
+        }
+    }
+
+    async function saveOccurrencePrice(occurrenceClaimId: string) {
+        const occurrence = userClaimOccurrences.find((c) => c.claimId === occurrenceClaimId);
+        if (!occurrence) return;
+
+        const nextPrice = occurrencePriceDrafts[occurrenceClaimId];
+        if (!Number.isFinite(nextPrice) || nextPrice < 0) {
+            toaster.error({ description: $t("general.oops") });
+            return;
+        }
+
+        const claimedCurrency = (occurrence.claimedPrice?.currency ?? claimCurrency ?? fallbackCurrency)?.toUpperCase();
+        if (!claimedCurrency) {
+            toaster.error({ description: $t("general.oops") });
+            return;
+        }
+
+        occurrenceSaving[occurrenceClaimId] = true;
+        try {
+            const claimAPI = new ClaimAPI(occurrenceClaimId);
+            const claimedPrice = Math.round(nextPrice);
+            const resp = await claimAPI.updateQuantity(occurrence.quantity, claimedPrice, claimedCurrency);
+            if (!resp.ok) {
+                toaster.error({ description: await getResponseError(resp) });
+                return;
+            }
+
+            const updatedClaim = item.claims.find((c) => c.claimId === occurrenceClaimId);
+            if (updatedClaim) {
+                updatedClaim.claimedPrice = { value: claimedPrice, currency: claimedCurrency };
+            }
+            if (occurrenceClaimId === claimId) {
+                claimPrice = claimedPrice;
+                manualClaimCurrency = claimedCurrency;
+            }
+            toaster.info({ description: $t("wishes.updated-claim") });
+        } finally {
+            occurrenceSaving[occurrenceClaimId] = false;
         }
     }
 
@@ -308,7 +360,7 @@
         {/if}
     {/if}
 
-    {#if (item.remainingQuantity > 1 || claim) && !standaloneClaim}
+    {#if item.remainingQuantity > 1 || claim || standaloneClaim}
         <div class="flex flex-col gap-1">
             <label class="w-fit">
                 <span>{$t("wishes.enter-the-quantity-to-claim")}</span>
@@ -341,29 +393,80 @@
         </div>
     {/if}
 
-    {#if desiredPrice !== null}
-        <label class="w-fit">
-            <span>{$t("wishes.price")}</span>
-            <input class="input" inputmode="decimal" min="0" step="0.01" type="number" bind:value={claimPrice} />
+    <label class="w-fit">
+        <span>{$t("wishes.price")}</span>
+        <input class="input" inputmode="decimal" min="0" step="0.01" type="number" bind:value={claimPrice} />
+        {#if claim && userClaimOccurrences.length > 0}
+            <div class="mt-2 flex w-full flex-col gap-2">
+                <span class="subtext">Your claims on this card:</span>
+                {#each userClaimOccurrences as occurrence}
+                    {@const rowCurrency = occurrence.claimedPrice?.currency ?? claimCurrency ?? fallbackCurrency}
+                    <div class="flex flex-wrap items-center gap-2 rounded border p-2">
+                        <span class="subtext min-w-32">
+                            {occurrence.claimId === claimId ? "Current claim" : `Claim ${occurrence.claimId.slice(0, 8)}`}
+                            {" • "}
+                            Qty {occurrence.quantity}
+                        </span>
+                        <input
+                            class="input input-sm max-w-28"
+                            inputmode="decimal"
+                            min="0"
+                            step="0.01"
+                            type="number"
+                            value={occurrencePriceDrafts[occurrence.claimId] ?? occurrence.claimedPrice?.value ?? 0}
+                            oninput={(e) => {
+                                occurrencePriceDrafts[occurrence.claimId] = Number(
+                                    (e.currentTarget as HTMLInputElement).value
+                                );
+                            }}
+                        />
+                        <span class="subtext">{rowCurrency}</span>
+                        <button
+                            class="btn btn-xs preset-tonal"
+                            onclick={(e) => {
+                                e.preventDefault();
+                                claimPrice = occurrencePriceDrafts[occurrence.claimId] ?? occurrence.claimedPrice?.value ?? null;
+                                manualClaimCurrency = rowCurrency;
+                            }}
+                            type="button"
+                        >
+                            Use here
+                        </button>
+                        <button
+                            class="btn btn-xs preset-filled-primary-500"
+                            disabled={occurrenceSaving[occurrence.claimId]}
+                            onclick={(e) => {
+                                e.preventDefault();
+                                saveOccurrencePrice(occurrence.claimId);
+                            }}
+                            type="button"
+                        >
+                            Save
+                        </button>
+                    </div>
+                {/each}
+            </div>
+        {/if}
+        {#if desiredPrice !== null}
             <span class="subtext">Desired price: {formatPrice(item)}</span>
-                <span class="subtext">
-                    Preview total:
-                    {#if previewTotal !== null && claimCurrency}
-                        {formatPlainNumber(previewTotal)} {claimCurrency}
-                    {:else}
-                        -
-                    {/if}
-                </span>
-                <span class="subtext">
-                    Current total owed:
-                    {#if currentTotal !== null && claim?.claimedPrice}
-                        {formatPlainNumber(currentTotal)} {claim.claimedPrice.currency}
-                    {:else}
-                        -
-                    {/if}
-                </span>
-        </label>
-    {/if}
+        {/if}
+        <span class="subtext">
+            Preview total:
+            {#if previewTotal !== null && claimCurrency}
+                {formatPlainNumber(previewTotal)} {claimCurrency}
+            {:else}
+                -
+            {/if}
+        </span>
+        <span class="subtext">
+            Current total owed:
+            {#if currentTotal !== null && claim?.claimedPrice}
+                {formatPlainNumber(currentTotal)} {claim.claimedPrice.currency}
+            {:else}
+                -
+            {/if}
+        </span>
+    </label>
 
     {#snippet actions({ neutralStyle, negativeStyle, positiveStyle })}
         <Dialog.CloseTrigger class={neutralStyle} type="button">
