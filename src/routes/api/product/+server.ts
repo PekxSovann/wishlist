@@ -59,7 +59,8 @@ export const GET: RequestHandler = async ({ request, url }) => {
                 metadata = await getUrlOrError(metadata.url).then((url) => goShopping(url, locales));
             }
             if (isCaptchaResponse(metadata)) {
-                error(424, $t("errors.product-information-not-available"));
+                logger.warn({ targetUrl: targetUrl.toString() }, "Product metadata blocked by captcha, using fallback");
+                return new Response(JSON.stringify({ url: targetUrl.toString() }));
             }
 
             if (metadata.url == metadata.image) {
@@ -73,7 +74,7 @@ export const GET: RequestHandler = async ({ request, url }) => {
             }
 
             logger.warn({ err, targetUrl: encodedUrl }, "Unable to fetch product metadata");
-            error(424, $t("errors.product-information-not-available"));
+            return new Response(JSON.stringify({ url: encodedUrl }));
         }
     } else {
         error(400, $t("errors.must-specify-url-in-query-parameters"));
