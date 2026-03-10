@@ -8,10 +8,18 @@ import type { UserConfig } from "vite";
 
 // Get current tag/commit and last commit date from git
 const pexec = promisify(exec);
+const runGit = async (cmd: string, fallback: string) => {
+    try {
+        return (await pexec(cmd)).stdout.trim() || fallback;
+    } catch {
+        return fallback;
+    }
+};
+
 const [version, sha] = (
     await Promise.all([
-        env.VERSION ?? pexec("git describe --tags || git rev-parse --short HEAD").then((v) => v.stdout.trim()),
-        env.SHA ?? pexec("git rev-parse --short HEAD").then((v) => v.stdout.trim())
+        env.VERSION ?? runGit("git describe --tags || git rev-parse --short HEAD", "dev"),
+        env.SHA ?? runGit("git rev-parse --short HEAD", "unknown")
     ])
 ).map((v) => JSON.stringify(v));
 
