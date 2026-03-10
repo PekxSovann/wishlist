@@ -20,20 +20,43 @@ type ProductDiagnostic = {
     hostname: string;
 };
 
+// const goShopping = async (targetUrl: URL, locales: string[]) => {
+//     const resp = await fetch(targetUrl, {
+//         headers: {
+//             "user-agent":
+//                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+//             "accept-language": locales.join(",")
+//         }
+//     });
+//     if (!resp.ok) {
+//         throw new Error(`Unable to fetch url: ${resp.status}`);
+//     }
+//     const html = await resp.text();
+//     const metadata = await scraper({ html, url: resp.url });
+//     return metadata;
+// };
+
 const goShopping = async (targetUrl: URL, locales: string[]) => {
+    const acceptLanguage =
+    locales?.length
+        ? [ "ja-JP,ja;q=0.9", ...locales ].join(",")
+        : "ja-JP,ja;q=0.9,en;q=0.8";
+
     const resp = await fetch(targetUrl, {
-        headers: {
-            "user-agent":
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-            "accept-language": locales.join(",")
-        }
-    });
-    if (!resp.ok) {
-        throw new Error(`Unable to fetch url: ${resp.status}`);
+    headers: {
+        "user-agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "accept":
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "accept-language": acceptLanguage,
+        "referer": "https://yuyu-tei.jp/",
+        "upgrade-insecure-requests": "1"
     }
+    });
+
+    if (!resp.ok) throw new Error(`Unable to fetch url: ${resp.status}`);
     const html = await resp.text();
-    const metadata = await scraper({ html, url: resp.url });
-    return metadata;
+    return scraper({ html, url: resp.url });
 };
 
 const isCaptchaResponse = (metadata: Metadata) => {
