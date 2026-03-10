@@ -28,10 +28,7 @@
 
     let expandClaims = $state(false);
     const visibleBuyerNotes = $derived.by(() => {
-        const notes = item.buyerNotes || [];
-        if (!user?.id) return [];
-        if (item.userId === user.id) return notes;
-        return notes.filter((note) => note.userId === user.id);
+        return item.buyerNotes || [];
     });
 </script>
 
