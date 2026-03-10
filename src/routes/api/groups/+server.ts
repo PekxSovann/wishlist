@@ -5,10 +5,10 @@ import { Role } from "$lib/schema";
 import { getFormatter } from "$lib/server/i18n";
 import { create } from "$lib/server/list";
 import { getConfig } from "$lib/server/config";
-import { requireLoginOrError } from "$lib/server/auth";
+import { requireRole } from "$lib/server/auth";
 
 export const PUT: RequestHandler = async ({ request }) => {
-    const user = await requireLoginOrError();
+    const user = await requireRole(Role.ADMIN);
     const $t = await getFormatter();
 
     const data = await request.json();

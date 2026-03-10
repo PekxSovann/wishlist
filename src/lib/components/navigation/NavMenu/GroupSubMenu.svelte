@@ -6,6 +6,7 @@
     import GroupSelectModal from "$lib/components/modals/GroupSelectModal.svelte";
     import PromptModal from "$lib/components/modals/PromptModal.svelte";
     import { getFormatter } from "$lib/i18n";
+    import { Role } from "$lib/schema";
 
     interface Props {
         user: LocalUser | undefined;
@@ -83,25 +84,27 @@
     {/if}
 {/if}
 
-<li>
-    <PromptModal
-        description={$t("general.provide-the-name-of-the-group-below")}
-        inputProps={{ type: "text", minlength: 3, maxlength: 32, required: true }}
-        onSubmit={createGroup}
-        title={$t("general.enter-group-name")}
-    >
-        {#snippet trigger(props)}
-            <button
-                {...props}
-                class="list-option w-full"
-                onclick={(e) => {
-                    onSelect();
-                    props.onclick?.(e);
-                }}
-            >
-                <iconify-icon icon="ion:add"></iconify-icon>
-                <span>{$t("general.create-group")}</span>
-            </button>
-        {/snippet}
-    </PromptModal>
-</li>
+{#if user?.roleId === Role.ADMIN}
+    <li>
+        <PromptModal
+            description={$t("general.provide-the-name-of-the-group-below")}
+            inputProps={{ type: "text", minlength: 3, maxlength: 32, required: true }}
+            onSubmit={createGroup}
+            title={$t("general.enter-group-name")}
+        >
+            {#snippet trigger(props)}
+                <button
+                    {...props}
+                    class="list-option w-full"
+                    onclick={(e) => {
+                        onSelect();
+                        props.onclick?.(e);
+                    }}
+                >
+                    <iconify-icon icon="ion:add"></iconify-icon>
+                    <span>{$t("general.create-group")}</span>
+                </button>
+            {/snippet}
+        </PromptModal>
+    </li>
+{/if}
