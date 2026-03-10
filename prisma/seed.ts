@@ -34,6 +34,17 @@ const roles = async () => {
         update: {}
     });
 
+    await prisma.role.upsert({
+        where: {
+            id: 4
+        },
+        create: {
+            id: 4,
+            name: "BUYER"
+        },
+        update: {}
+    });
+
     console.log("roles are synced");
 };
 

@@ -151,7 +151,7 @@
         });
     };
 
-    const removeItem = (removedItem: { id: number }) => {
+    const removeItem = (removedItem: { id: string }) => {
         allItems = allItems.filter((item) => item.id !== removedItem.id);
     };
 
@@ -199,13 +199,13 @@
         updateDisplayOrder(swapped);
         return swapped;
     };
-    const handleIncreasePriority = (itemId: number) => {
+    const handleIncreasePriority = (itemId: string) => {
         const itemIdx = allItems.findIndex((item) => item.id === itemId);
         if (itemIdx > 0) {
             allItems = swap(allItems, itemIdx, itemIdx - 1);
         }
     };
-    const handleDecreasePriority = (itemId: number) => {
+    const handleDecreasePriority = (itemId: string) => {
         const itemIdx = allItems.findIndex((item) => item.id === itemId);
         if (itemIdx < allItems.length - 1) {
             allItems = swap(allItems, itemIdx, itemIdx + 1);

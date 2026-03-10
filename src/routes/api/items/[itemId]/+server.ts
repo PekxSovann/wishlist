@@ -20,13 +20,11 @@ const validateItem = async (itemId: string | undefined) => {
 
     if (!itemId) {
         error(400, $t("errors.must-specify-an-item-to-delete"));
-    } else if (isNaN(parseInt(itemId))) {
-        error(400, $t("errors.item-id-must-be-a-number"));
     }
 
     const item = await client.item.findUnique({
         where: {
-            id: parseInt(itemId)
+            id: itemId
         },
         select: {
             id: true,

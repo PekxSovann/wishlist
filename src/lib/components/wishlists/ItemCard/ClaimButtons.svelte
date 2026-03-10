@@ -33,6 +33,15 @@
 
     const userClaim = $derived(item.claims.find((claim) => claim.claimedBy && claim.claimedBy.id === user?.id));
     const isClaimOnList = $derived(userClaim?.listId === item.listId);
+    const canClaimAnother = $derived(
+        Boolean(
+            userClaim &&
+                isClaimOnList &&
+                item.quantity !== null &&
+                item.quantity > 1 &&
+                item.remainingQuantity > 0
+        )
+    );
 
     const handlePurchased = async (purchased: boolean) => {
         if (userClaim && isClaimOnList) {
@@ -63,6 +72,21 @@
                     </button>
                 {/snippet}
             </ClaimItemModal>
+            {#if canClaimAnother}
+                <ClaimItemModal
+                    standaloneClaim
+                    {groupId}
+                    {item}
+                    {requireClaimEmail}
+                    userId={user?.id}
+                >
+                    {#snippet trigger(props)}
+                        <button {...props} class="btn btn-sm md:btn inset-ring-secondary-500 inset-ring">
+                            Claim another one
+                        </button>
+                    {/snippet}
+                </ClaimItemModal>
+            {/if}
             <button
                 class={[
                     "btn btn-icon btn-icon-sm md:btn-icon-base",

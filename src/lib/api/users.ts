@@ -29,6 +29,10 @@ export class UserAPI {
     delete = async (): Promise<Response> => {
         return await this._makeRequest("DELETE");
     };
+
+    setRole = async (roleId: number): Promise<Response> => {
+        return await this._makeRequest("PATCH", "", { roleId });
+    };
 }
 
 type UsersSearchOptions = {

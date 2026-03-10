@@ -70,6 +70,8 @@
         "id-field": "User Id: {id}",
         "list-creation": "List Settings",
         "make-admin": "Make Admin",
+        "set-user-role": "Set role: User",
+        "set-buyer-role": "Set role: Buyer",
         "manager": "Manager",
         "members": "Members",
         "oidc": "OpenID Connect (OIDC)",
@@ -133,7 +135,9 @@
     },
     "app": {
         "home": "Home",
-        "my-claims": "My Claims"
+        "all-items": "All Items",
+        "my-claims": "My Claims",
+        "my-payments": "My Payments"
     },
     "auth": {
         "account-is-not-linked-with-oauth": "Your account is not linked with {providerName}. To link your account, sign out and click 'Sign in with {providerName}'.",

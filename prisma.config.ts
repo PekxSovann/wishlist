@@ -4,10 +4,10 @@ import { defineConfig } from "prisma/config";
 export default defineConfig({
     schema: "prisma/schema.prisma",
     migrations: {
-        path: "prisma/migrations",
+        path: "prisma/migrations-postgres",
         seed: "tsx prisma/seed.ts"
     },
     datasource: {
-        url: process.env.DATABASE_URL || "prisma/dev.db"
+        url: process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/wishlist?schema=public"
     }
 });

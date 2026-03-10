@@ -1,6 +1,6 @@
 export class ItemAPI {
-    itemId: number;
-    constructor(itemId: number) {
+    itemId: string;
+    constructor(itemId: string) {
         this.itemId = itemId;
     }
 
@@ -45,7 +45,7 @@ export class ItemsAPI {
         return await this._makeRequest("DELETE", "?" + searchParams.toString());
     };
 
-    updateMany = async (items: (Record<string, unknown> & { id: number })[]) => {
+    updateMany = async (items: (Record<string, unknown> & { id: string })[]) => {
         return await this._makeRequest("PATCH", "", items);
     };
 }

@@ -39,6 +39,7 @@ export const load: PageServerLoad = async () => {
         },
         users: users.map((user) => ({
             isAdmin: user.role.id === Role.ADMIN,
+            roleName: user.role.id === Role.BUYER ? "BUYER" : user.role.id === Role.USER ? "USER" : user.role.id === Role.ADMIN ? "ADMIN" : "GROUP_MANAGER",
             groups: user.UserGroupMembership.map(({ group }) => group.name),
             ...user
         })),

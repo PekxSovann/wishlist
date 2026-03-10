@@ -10,7 +10,7 @@ const ITEMS_UPDATE = "items_update";
 export const ItemEvent = { ITEMS_UPDATE, ITEM_CREATE, ITEM_UPDATE, ITEM_DELETE } as const;
 
 interface ItemDeleteEvent {
-    id: number;
+    id: string;
     lists: { id: string }[];
 }
 

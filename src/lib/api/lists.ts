@@ -35,9 +35,9 @@ export class ListAPI {
 
 export class ListItemAPI {
     private listId: string;
-    private itemId: number;
+    private itemId: string;
 
-    constructor(listId: string, itemId: number) {
+    constructor(listId: string, itemId: string) {
         this.listId = listId;
         this.itemId = itemId;
     }
@@ -71,11 +71,16 @@ export class ListItemAPI {
         return await this._makeRequest("DELETE");
     };
 
-    claim = async (claimedById: string, quantity: number) => {
-        return await this._makeRequest("PUT", "/claims", { claimedById, quantity });
+    claim = async (claimedById: string, quantity: number, claimedPrice?: number | null, claimedCurrency?: string | null) => {
+        return await this._makeRequest("PUT", "/claims", { claimedById, quantity, claimedPrice, claimedCurrency });
     };
 
-    claimPublic = async (publicClaimedById: string, quantity: number) => {
-        return await this._makeRequest("PUT", "/claims", { publicClaimedById, quantity });
+    claimPublic = async (
+        publicClaimedById: string,
+        quantity: number,
+        claimedPrice?: number | null,
+        claimedCurrency?: string | null
+    ) => {
+        return await this._makeRequest("PUT", "/claims", { publicClaimedById, quantity, claimedPrice, claimedCurrency });
     };
 }

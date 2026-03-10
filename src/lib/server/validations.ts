@@ -102,7 +102,7 @@ export const getListPropertiesSchema = () => {
 };
 
 export const listItemsUpdateSchema = z.object({
-    itemId: z.number(),
+    itemId: z.string(),
     displayOrder: z.number().nullish()
 });
 
@@ -113,12 +113,17 @@ export const listItemUpdateSchema = z.object({
 export const listItemClaimSchema = z.object({
     quantity: z.number(),
     claimedById: z.string().nullish(),
-    publicClaimedById: z.string().nullish()
+    publicClaimedById: z.string().nullish(),
+    claimedPrice: z.number().int().nullish(),
+    claimedCurrency: z.string().length(3).nullish()
 });
 
 export const listItemClaimUpdateSchema = z.object({
     purchased: z.boolean().nullish(),
-    quantity: z.number().optional()
+    quantity: z.number().optional(),
+    claimedPrice: z.number().int().nullish(),
+    claimedCurrency: z.string().length(3).nullish(),
+    receivedAmount: z.number().int().min(0).nullish()
 });
 
 export const getItemCreateSchema = async () => {

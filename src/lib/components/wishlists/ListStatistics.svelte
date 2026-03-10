@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { ItemOnListDTO } from "$lib/dtos/item-dto";
     import { getFormatter } from "$lib/i18n";
-    import { formatNumberAsPrice } from "$lib/price-formatter";
+    import { formatNumberAsPrice, formatPlainNumber } from "$lib/price-formatter";
 
     interface Props {
         items: ItemOnListDTO[];
@@ -27,6 +27,31 @@
             .toSorted((a, b) => b.total - a.total);
     });
     const highestTotal = $derived(totalCostByCurrency[0]);
+    const owedByClaimants = $derived.by(() => {
+        const totals = items
+            .flatMap((item) =>
+                item.claims
+                    .filter((claim) => claim.listId === item.listId && claim.claimedPrice)
+                    .map((claim) => ({
+                        name: claim.claimedBy?.name ?? claim.publicClaimedBy?.name ?? "Anonymous",
+                        currency: claim.claimedPrice!.currency,
+                        amount: claim.claimedPrice!.value * claim.quantity
+                    }))
+            )
+            .reduce(
+                (acc, row) => {
+                    const key = `${row.name}::${row.currency}`;
+                    if (!acc[key]) {
+                        acc[key] = { name: row.name, currency: row.currency, total: 0 };
+                    }
+                    acc[key].total += row.amount;
+                    return acc;
+                },
+                {} as Record<string, { name: string; currency: string; total: number }>
+            );
+
+        return Object.values(totals);
+    });
 
     let seePrices = $state(false);
 </script>
@@ -65,6 +90,14 @@
                     {$t("wishes.hide-all-currencies")}
                 </span>
             </button>
+        </div>
+    {/if}
+    {#if owedByClaimants.length > 0}
+        <div class="mt-1 flex flex-col">
+            <span class="subtext font-medium">Current owed</span>
+            {#each owedByClaimants as owed}
+                <span class="subtext">{owed.name}: {formatPlainNumber(owed.total)} {owed.currency}</span>
+            {/each}
         </div>
     {/if}
 </div>

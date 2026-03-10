@@ -4,9 +4,14 @@ import { getActiveMembership } from "$lib/server/group-membership";
 import { toItemOnListDTO } from "$lib/dtos/item-mapper";
 import { requireLogin } from "$lib/server/auth";
 import { decodeMultiValueFilter } from "$lib/server/sort-filter-util";
+import { redirect } from "@sveltejs/kit";
+import { Role } from "$lib/schema";
 
 export const load: PageServerLoad = async ({ url, cookies }) => {
     const user = requireLogin();
+    if (user.roleId === Role.USER) {
+        redirect(302, `/lists?users=${user.id}`);
+    }
 
     const activeMembership = await getActiveMembership(user);
 
@@ -60,6 +65,8 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
                     listId: true,
                     purchased: true,
                     quantity: true,
+                    claimedPrice: true,
+                    claimedCurrency: true,
                     claimedBy: {
                         select: {
                             id: true,

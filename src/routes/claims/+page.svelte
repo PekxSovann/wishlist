@@ -26,25 +26,34 @@
     let isTileView = $derived(getListViewPreference() === "tile");
 
     let groupBy = $state("purchased");
+    const hasUnpurchasedClaim = (item: ItemOnListDTO) => item.claims.some((claim) => !claim.purchased);
+    let visibleItems = $derived(groupBy === "to-buy" ? items.filter((item) => hasUnpurchasedClaim(item)) : items);
+    const hasPurchasedClaim = (item: ItemOnListDTO) => item.claims.some((claim) => Boolean(claim.purchased));
 
     let groupedItems = $derived.by(() => {
-        let groupedItems: Record<string, ItemOnListDTO[]> = { _default: items };
         if (groupBy === "purchased") {
-            groupedItems = Object.groupBy(items, (it) => (it.claims[0].purchased ? "Purchased" : "_default"));
-        } else if (groupBy === "user") {
-            groupedItems = items.reduce(
-                (accum, item) => {
-                    (accum[item.user.name] ??= []).push(item);
-                    return accum;
-                },
-                {} as Record<string, ItemOnListDTO[]>
-            );
+            const purchased = visibleItems.filter((it) => it.claims.length > 0);
+            return [[$t("wishes.purchased"), purchased]].filter(([, grouped]) => grouped.length > 0) as [
+                string,
+                ItemOnListDTO[]
+            ][];
         }
-        return Object.entries(groupedItems).toSorted(([categoryA], [categoryB]) => categoryA.localeCompare(categoryB));
+        if (groupBy === "user") {
+            return Object.entries(
+                visibleItems.reduce(
+                    (accum, item) => {
+                        (accum[item.user.name] ??= []).push(item);
+                        return accum;
+                    },
+                    {} as Record<string, ItemOnListDTO[]>
+                )
+            ).toSorted(([categoryA], [categoryB]) => categoryA.localeCompare(categoryB));
+        }
+        return [["_default", visibleItems]] as [string, ItemOnListDTO[]][];
     });
 
     const isPurchased = (item: ItemOnListDTO) => {
-        return item.claims[0].purchased ? 1 : 0;
+        return hasPurchasedClaim(item) ? 1 : 0;
     };
 
     let users = $derived(items.map((item) => item.user));
@@ -59,7 +68,7 @@
     <ListViewModeChip {isTileView} />
 </div>
 
-{#if data.items.length === 0}
+{#if visibleItems.length === 0}
     <div class="flex flex-col items-center justify-center space-y-4 pt-4">
         <img class="w-3/4 md:w-1/3" alt={$t("a11y.a-person-looking-at-an-empty-board")} src={noClaims} />
         <p class="text-2xl">{$t("wishes.nothing-claimed-yet")}</p>

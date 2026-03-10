@@ -137,7 +137,7 @@ export const DELETE: RequestHandler = async ({ url }) => {
         });
 
         if (partiallyClaimedItems.length > 0) {
-            const itemsToUpdate: { id: number; quantity: number }[] = [];
+            const itemsToUpdate: { id: string; quantity: number }[] = [];
             let claimsToDelete: string[] = [];
             partiallyClaimedItems.forEach((item) => {
                 const claimedQty = item.claims.reduce((accum, claim) => accum + claim.quantity, 0);
@@ -185,7 +185,7 @@ export const PATCH: RequestHandler = async ({ request }) => {
         if (!item.id) {
             error(422, $t("errors.one-or-more-items-missing-an-id"));
         }
-        return item.id as number;
+        return item.id as string;
     });
 
     const items = await client.item.findMany({

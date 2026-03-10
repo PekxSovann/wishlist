@@ -10,6 +10,7 @@ import { createUser } from "$lib/server/user";
 import { Role } from "$lib/schema";
 import { getFormatter } from "$lib/server/i18n";
 import { logger } from "$lib/server/logger";
+import { Prisma } from "$lib/generated/prisma/client";
 import z from "zod";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -27,13 +28,18 @@ export const load: PageServerLoad = async ({ locals, url }) => {
             },
             select: {
                 id: true,
-                createdAt: true
+                createdAt: true,
+                groupId: true
             }
         });
 
         if (!signup) error(400, $t("errors.reset-token-not-found"));
+        const group = await client.group.findUnique({
+            where: { id: signup.groupId },
+            select: { id: true }
+        });
 
-        if (validateToken(signup.createdAt)) {
+        if (validateToken(signup.createdAt) && group) {
             return { valid: true, id: signup.id };
         }
         error(400, $t("errors.invite-code-invalid"));
@@ -67,11 +73,18 @@ export const actions: Actions = {
                 },
                 select: {
                     createdAt: true,
-                    redeemed: true
+                    redeemed: true,
+                    groupId: true
                 }
             });
+            const group = signup
+                ? await client.group.findUnique({
+                      where: { id: signup.groupId },
+                      select: { id: true }
+                  })
+                : null;
 
-            if (!signup || signup.redeemed || !validateToken(signup.createdAt)) {
+            if (!signup || signup.redeemed || !validateToken(signup.createdAt) || !group) {
                 error(400, $t("errors.invite-code-invalid"));
             }
         }
@@ -94,10 +107,16 @@ export const actions: Actions = {
             setSessionTokenCookie(cookies, sessionToken, session.expiresAt);
             return { success: true };
         } catch (err) {
-            logger.error({ err }, "User with username or email already exists");
+            logger.error({ err }, "Unable to create user");
+            if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+                return fail(400, {
+                    error: true,
+                    message: $t("errors.user-already-exists")
+                });
+            }
             return fail(400, {
                 error: true,
-                message: $t("errors.user-already-exists")
+                message: $t("general.oops")
             });
         }
     }

@@ -1,5 +1,6 @@
 export enum Role {
     USER = 1,
     ADMIN,
-    GROUP_MANAGER
+    GROUP_MANAGER,
+    BUYER
 }

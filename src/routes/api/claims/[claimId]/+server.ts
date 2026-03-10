@@ -26,7 +26,17 @@ export const PATCH: RequestHandler = async ({ request, params }) => {
             id: true,
             itemId: true,
             claimedById: true,
-            publicClaimedById: true
+            publicClaimedById: true,
+            claimedCurrency: true,
+            item: {
+                select: {
+                    itemPrice: {
+                        select: {
+                            currency: true
+                        }
+                    }
+                }
+            }
         },
         where: {
             id: params.claimId
@@ -52,17 +62,33 @@ export const PATCH: RequestHandler = async ({ request, params }) => {
             return deleteClaim(claim.id, user);
         }
 
-        if (
-            (updateData.data.purchased !== null && updateData.data.purchased !== undefined) ||
-            updateData.data.quantity
-        ) {
+        const hasPurchasedUpdate = updateData.data.purchased !== null && updateData.data.purchased !== undefined;
+        const hasQuantityUpdate = updateData.data.quantity !== null && updateData.data.quantity !== undefined;
+        const hasClaimedPriceUpdate = updateData.data.claimedPrice !== null && updateData.data.claimedPrice !== undefined;
+        const hasClaimedCurrencyUpdate =
+            updateData.data.claimedCurrency !== null && updateData.data.claimedCurrency !== undefined;
+        const hasReceivedAmountUpdate =
+            updateData.data.receivedAmount !== null && updateData.data.receivedAmount !== undefined;
+        const effectiveClaimedCurrency =
+            updateData.data.claimedCurrency?.toUpperCase() ??
+            claim.claimedCurrency?.toUpperCase() ??
+            claim.item.itemPrice?.currency?.toUpperCase();
+
+        if (hasPurchasedUpdate || hasQuantityUpdate || hasClaimedPriceUpdate || hasClaimedCurrencyUpdate || hasReceivedAmountUpdate) {
             await client.itemClaim.update({
                 data: {
                     purchased:
                         updateData.data.purchased !== null && updateData.data.purchased !== undefined
                             ? updateData.data.purchased
                             : undefined,
-                    quantity: updateData.data.quantity ?? undefined
+                    quantity: updateData.data.quantity ?? undefined,
+                    claimedPrice:
+                        updateData.data.claimedPrice !== null && updateData.data.claimedPrice !== undefined
+                            ? updateData.data.claimedPrice
+                            : undefined,
+                    claimedCurrency:
+                        hasClaimedPriceUpdate || hasClaimedCurrencyUpdate ? (effectiveClaimedCurrency ?? undefined) : undefined,
+                    receivedAmount: hasReceivedAmountUpdate ? (updateData.data.receivedAmount ?? undefined) : undefined
                 },
                 where: {
                     id: claim.id

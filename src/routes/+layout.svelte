@@ -15,6 +15,7 @@
     import { navItems } from "$lib/components/navigation/navigation";
     import { setFormatter, setLocale } from "$lib/i18n";
     import Toaster from "$lib/components/toaster/Toaster.svelte";
+    import { Role } from "$lib/schema";
 
     const { data, children }: LayoutProps = $props();
 
@@ -83,6 +84,13 @@
 
     let footerHeight: number | undefined = $state();
     let toasterYShift: number | undefined = $derived(footerHeight && footerHeight + 12);
+    const visibleNavItems = $derived.by(() => {
+        if (!data.user) return navItems;
+        if (data.user.roleId === Role.USER) {
+            return navItems.filter((item) => item.labelKey === "wishes.my-lists" || item.labelKey === "app.my-payments");
+        }
+        return navItems;
+    });
 </script>
 
 <div class="min-h-screen">
@@ -90,7 +98,7 @@
         {#if showNavigationLoadingBar}
             <NavigationLoadingBar />
         {/if}
-        <NavBar groups={data.groups} isProxyUser={data.isProxyUser} {navItems} user={data.user} />
+        <NavBar groups={data.groups} isProxyUser={data.isProxyUser} navItems={visibleNavItems} user={data.user} />
     </header>
 
     <main id="main" class="h-full min-h-screen px-4 py-4 md:px-12 lg:px-32 xl:px-56">
@@ -101,7 +109,7 @@
     </main>
 
     <footer class="sticky bottom-0 z-10 print:hidden" bind:clientHeight={footerHeight}>
-        <BottomTabs {navItems} user={data.user} />
+        <BottomTabs navItems={visibleNavItems} user={data.user} />
     </footer>
 </div>
 

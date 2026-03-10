@@ -3,8 +3,8 @@ import { getMinorUnits } from "$lib/price-formatter";
 import type { Prisma } from "$lib/generated/prisma/client";
 
 export const patchItem = (body: Record<string, unknown>) => {
-    const data: Prisma.ItemUpdateInput & { id?: number } = {
-        id: body.id as number
+    const data: Prisma.ItemUpdateInput & { id?: string } = {
+        id: body.id as string
     };
     let deleteOldImage = false;
 

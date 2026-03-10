@@ -10,6 +10,10 @@ type BaseClaim = {
     claimId: string;
     quantity: number;
     listId: string;
+    claimedPrice?: {
+        value: number;
+        currency: string;
+    };
 };
 
 interface Claimed extends BaseClaim {

@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { unlink } from "fs/promises";
+import { mkdir, unlink } from "fs/promises";
 import { logger } from "$lib/server/logger";
 import { getRequestEvent } from "$app/server";
 import { Readable } from "stream";
@@ -66,6 +66,7 @@ export const createImage = async (filename: string, image: File | string | null 
     try {
         let failure = false;
         const fname = slugify(filename) + "-" + Date.now().toString() + ".webp";
+        await mkdir("uploads", { recursive: true });
         const writeStream = createWriteStream(`uploads/${fname}`);
         const transformer = sharp()
             .rotate()

@@ -1,7 +1,7 @@
 <script lang="ts">
     import Markdown from "$lib/components/Markdown.svelte";
     import { getFormatter } from "$lib/i18n";
-    import { formatPrice } from "$lib/price-formatter";
+    import { formatPrice, formatPlainNumber } from "$lib/price-formatter";
     import { shouldShowName, getClaimedName } from "../../util";
     import type { ItemCardProps } from "../ItemCard.svelte";
 
@@ -33,9 +33,11 @@
 {#if item.price || item.itemPrice}
     <div class="flex items-center gap-x-2">
         <iconify-icon icon="ion:pricetag"></iconify-icon>
-        <span data-testid="price">
-            {formatPrice(item)}
-        </span>
+        <div class="flex flex-col">
+            <span data-testid="price">
+                {formatPrice(item)}
+            </span>
+        </div>
     </div>
 {/if}
 
@@ -58,7 +60,7 @@
         {/if}
     </div>
 </div>
-{#if showDetail && showClaimedName && item.claims.length > 0 && (item.userId !== user?.id || showClaimForOwner)}
+{#if showDetail && item.claims.length > 0 && (item.userId === user?.id || (showClaimedName && (item.userId !== user?.id || showClaimForOwner)))}
     <div class="card text-sm">
         <button
             class="flex w-full items-center justify-start! gap-2 p-2 text-start! text-sm"
@@ -79,11 +81,28 @@
                         user,
                         claim
                     )}
+                    {@const hasDifferentClaimPrice =
+                        Boolean(
+                            item.itemPrice &&
+                                claim.claimedPrice &&
+                                (claim.claimedPrice.currency !== item.itemPrice.currency ||
+                                    claim.claimedPrice.value !== item.itemPrice.value)
+                        )}
                     <div class="flex items-center justify-between py-1">
-                        <span>{showName ? getClaimedName(claim) : $t("wishes.anonymous")}</span>
-                        <span>
-                            {$t("wishes.claims", { values: { claimCount: claim.quantity } })}
-                        </span>
+                        <div class="flex flex-col">
+                            <span>{showName ? getClaimedName(claim) : $t("wishes.anonymous")}</span>
+                            {#if claim.claimedPrice}
+                                <span class={["subtext", hasDifferentClaimPrice && "text-secondary-900-100 font-medium"]}>
+                                    Paid: {formatPlainNumber(claim.claimedPrice.value)} {claim.claimedPrice.currency}
+                                </span>
+                            {:else}
+                                <span class="subtext">Paid: -</span>
+                            {/if}
+                            {#if item.itemPrice || item.price}
+                                <span class="subtext">Desired: {formatPrice(item)}</span>
+                            {/if}
+                        </div>
+                        <span>{$t("wishes.claims", { values: { claimCount: claim.quantity } })}</span>
                     </div>
                 {/each}
             </div>

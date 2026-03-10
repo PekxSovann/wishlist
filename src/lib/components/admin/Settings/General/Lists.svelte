@@ -48,4 +48,5 @@
             {$t("admin.allow-public-lists-tooltip")}
         {/snippet}
     </Setting>
+
 </SettingsGroup>

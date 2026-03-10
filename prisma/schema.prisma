@@ -1,5 +1,5 @@
 datasource db {
-    provider = "sqlite"
+    provider = "postgresql"
 }
 
 generator client {
@@ -116,7 +116,7 @@ model ListManager {
 }
 
 model Item {
-    id          Int         @id @unique @default(autoincrement())
+    id          String      @id @unique @default(cuid())
     name        String
     price       String?
     itemPriceId String?
@@ -151,7 +151,7 @@ model ListItem {
     list         List    @relation(fields: [listId], references: [id], onDelete: Cascade)
     listId       String
     item         Item    @relation(fields: [itemId], references: [id], onDelete: Cascade)
-    itemId       Int
+    itemId       String
     addedBy      User    @relation(fields: [addedById], references: [id])
     addedById    String
     approved     Boolean @default(true)
@@ -166,7 +166,7 @@ model ListItem {
 model ItemClaim {
     id                String      @id @unique @default(uuid())
     item              Item        @relation(fields: [itemId], references: [id], onDelete: Cascade)
-    itemId            Int
+    itemId            String
     list              List        @relation(fields: [listId], references: [id], onDelete: Cascade)
     listId            String
     claimedBy         User?       @relation(fields: [claimedById], references: [id], onDelete: Cascade)
@@ -175,6 +175,9 @@ model ItemClaim {
     publicClaimedById String?
     purchased         Boolean     @default(false)
     quantity          Int         @default(1)
+    claimedPrice      Int?
+    claimedCurrency   String?
+    receivedAmount    Int         @default(0)
 
     @@index([itemId])
     @@index([claimedById])

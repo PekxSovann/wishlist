@@ -1,7 +1,6 @@
 import { error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 
-import { gotScraping } from "got-scraping";
 import metascraper, { type Metadata } from "metascraper";
 import metascraperTitle from "metascraper-title";
 import metascraperImage from "metascraper-image";
@@ -9,28 +8,22 @@ import shopping from "$lib/server/shopping";
 import { parseAcceptLanguageHeader } from "$lib/i18n";
 import { getFormatter } from "$lib/server/i18n";
 import { requireLoginOrError } from "$lib/server/auth";
-import { env } from "$env/dynamic/private";
 
 const scraper = metascraper([shopping(), metascraperTitle(), metascraperImage()]);
 
-const determineProxy = (url: URL) => {
-    if (url.protocol === "http:") {
-        return env.http_proxy || env.HTTP_PROXY;
-    } else if (url.protocol === "https:") {
-        return env.https_proxy || env.HTTPS_PROXY;
-    }
-};
-
 const goShopping = async (targetUrl: URL, locales: string[]) => {
-    const resp = await gotScraping({
-        url: targetUrl,
-        proxyUrl: determineProxy(targetUrl),
-        headerGeneratorOptions: {
-            devices: ["desktop"],
-            locales
+    const resp = await fetch(targetUrl, {
+        headers: {
+            "user-agent":
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "accept-language": locales.join(",")
         }
     });
-    const metadata = await scraper({ html: resp.body, url: resp.url });
+    if (!resp.ok) {
+        throw new Error(`Unable to fetch url: ${resp.status}`);
+    }
+    const html = await resp.text();
+    const metadata = await scraper({ html, url: resp.url });
     return metadata;
 };
 

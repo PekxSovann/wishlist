@@ -5,9 +5,14 @@ import { z } from "zod";
 import { client } from "$lib/server/prisma";
 import { logger } from "$lib/server/logger";
 import { getFormatter } from "$lib/server/i18n";
+import { Role } from "$lib/schema";
 
 export const load = (async () => {
-    requireLogin();
+    const user = requireLogin();
+
+    if (user.roleId === Role.USER) {
+        redirect(308, `/lists?users=${user.id}`);
+    }
 
     redirect(308, "/lists");
 }) satisfies PageServerLoad;

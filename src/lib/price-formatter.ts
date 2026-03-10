@@ -72,6 +72,11 @@ export const getMinorUnits = (value: number, currency: string, locale?: string) 
     return value * Math.pow(10, maxFracDigits);
 };
 
+export const formatPlainNumber = (value: number, locale?: string) => {
+    const resolvedLocale = locale ?? (browser ? getLocale() : defaultLang.code);
+    return new Intl.NumberFormat(resolvedLocale).format(value);
+};
+
 const defaultConfig: LocaleConfig = {
     currencySymbol: "",
     groupSeparator: "",

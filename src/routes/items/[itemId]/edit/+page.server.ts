@@ -19,16 +19,13 @@ export const load: PageServerLoad = async ({ params }) => {
     const user = requireLogin();
 
     const $t = await getFormatter();
-    if (isNaN(parseInt(params.itemId))) {
-        error(400, $t("errors.item-id-must-be-a-number"));
-    }
 
     const activeMembership = await getActiveMembership(user);
     const config = await getConfig(activeMembership.groupId);
 
     const item = await client.item.findUnique({
         where: {
-            id: parseInt(params.itemId),
+            id: params.itemId,
             lists: {
                 some: {
                     list: {
@@ -114,7 +111,7 @@ export const actions: Actions = {
                 }
             },
             where: {
-                id: parseInt(params.itemId)
+                id: params.itemId
             }
         });
 
@@ -195,7 +192,7 @@ export const actions: Actions = {
                     },
                     where: {
                         listId_itemId: {
-                            itemId: parseInt(params.itemId),
+                            itemId: params.itemId,
                             listId: list.id
                         }
                     }
@@ -204,7 +201,7 @@ export const actions: Actions = {
 
         const updatedItem = await client.item.update({
             where: {
-                id: parseInt(params.itemId)
+                id: params.itemId
             },
             data: {
                 name,

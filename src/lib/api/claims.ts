@@ -29,8 +29,12 @@ export class ClaimAPI {
         return await this._makeRequest("PATCH", { purchased: false });
     };
 
-    updateQuantity = async (quantity: number) => {
-        return await this._makeRequest("PATCH", { quantity });
+    updateQuantity = async (quantity: number, claimedPrice?: number | null, claimedCurrency?: string | null) => {
+        return await this._makeRequest("PATCH", { quantity, claimedPrice, claimedCurrency });
+    };
+
+    updateReceivedAmount = async (receivedAmount: number) => {
+        return await this._makeRequest("PATCH", { receivedAmount });
     };
 
     unclaim = async () => {

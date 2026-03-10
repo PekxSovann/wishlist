@@ -2,12 +2,14 @@
     import type { List, User } from "$lib/generated/prisma/client";
     import Avatar from "./Avatar.svelte";
     import { getFormatter } from "$lib/i18n";
+    import { formatPlainNumber } from "$lib/price-formatter";
 
     interface ListWithCounts extends Partial<Pick<List, "id" | "name" | "icon" | "iconColor">> {
         owner: Pick<User, "name" | "username" | "picture">;
         itemCount?: number;
         claimedCount?: number;
         unapprovedCount?: number;
+        owedByClaimants?: { name: string; currency: string; total: number }[];
     }
 
     interface Props {
@@ -86,6 +88,14 @@
                     </div>
                 {/if}
             </div>
+            {#if list.owedByClaimants && list.owedByClaimants.length > 0}
+                <div class="mt-1 flex flex-col">
+                    <span class="subtext font-medium">Current owed</span>
+                    {#each list.owedByClaimants as owed}
+                        <span class="subtext">{owed.name}: {formatPlainNumber(owed.total)} {owed.currency}</span>
+                    {/each}
+                </div>
+            {/if}
         </div>
     </div>
 </svelte:element>

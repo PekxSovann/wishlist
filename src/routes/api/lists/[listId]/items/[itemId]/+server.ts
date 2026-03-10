@@ -34,10 +34,6 @@ export const PATCH: RequestHandler = async ({ request, params }) => {
     } else if (list.ownerId !== user.id && !list.managers.find(({ userId }) => userId === user.id)) {
         error(401, $t("errors.not-authorized"));
     }
-    if (isNaN(parseInt(params.itemId))) {
-        error(400, $t("errors.item-id-must-be-a-number"));
-    }
-
     const body = (await request.json()) as Record<string, unknown>[];
     const updateData = listItemUpdateSchema.safeParse(body);
 
@@ -51,7 +47,7 @@ export const PATCH: RequestHandler = async ({ request, params }) => {
                 where: {
                     listId_itemId: {
                         listId: params.listId,
-                        itemId: parseInt(params.itemId)
+                        itemId: params.itemId
                     }
                 },
                 data: {
@@ -61,7 +57,7 @@ export const PATCH: RequestHandler = async ({ request, params }) => {
 
             const item = await client.item.findUnique({
                 where: {
-                    id: parseInt(params.itemId)
+                    id: params.itemId
                 },
                 include: getItemInclusions(params.listId)
             });
@@ -79,10 +75,6 @@ export const PATCH: RequestHandler = async ({ request, params }) => {
 export const DELETE: RequestHandler = async ({ params }) => {
     const user = await requireLoginOrError();
     const $t = await getFormatter();
-
-    if (isNaN(parseInt(params.itemId))) {
-        error(400, $t("errors.item-id-must-be-a-number"));
-    }
 
     const [list, item, listItem, claims] = await Promise.all([
         client.list.findUnique({
@@ -111,7 +103,7 @@ export const DELETE: RequestHandler = async ({ params }) => {
                 }
             },
             where: {
-                id: parseInt(params.itemId)
+                id: params.itemId
             }
         }),
         client.listItem.findUnique({
@@ -122,7 +114,7 @@ export const DELETE: RequestHandler = async ({ params }) => {
             where: {
                 listId_itemId: {
                     listId: params.listId,
-                    itemId: parseInt(params.itemId)
+                    itemId: params.itemId
                 }
             }
         }),
@@ -132,7 +124,7 @@ export const DELETE: RequestHandler = async ({ params }) => {
             },
             where: {
                 listId: params.listId,
-                itemId: parseInt(params.itemId)
+                itemId: params.itemId
             }
         })
     ]);
@@ -184,7 +176,7 @@ export const DELETE: RequestHandler = async ({ params }) => {
             }
         });
 
-        itemEmitter.emit(ItemEvent.ITEM_DELETE, { id: parseInt(params.itemId), lists: [{ id: params.listId }] });
+        itemEmitter.emit(ItemEvent.ITEM_DELETE, { id: params.itemId, lists: [{ id: params.listId }] });
 
         return new Response(null, { status: 200 });
     } catch (err) {

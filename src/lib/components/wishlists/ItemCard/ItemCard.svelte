@@ -3,7 +3,7 @@
         activeGroupId: string;
     }
 
-    type ItemVoidFunction = (itemId: number) => void;
+    type ItemVoidFunction = (itemId: string) => void;
 
     export interface ItemCardProps {
         item: ItemOnListDTO;

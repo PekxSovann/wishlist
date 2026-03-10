@@ -15,7 +15,7 @@ interface UserWithGroups extends MinimalUser {
     UserGroupMembership: Pick<UserGroupMembership, "groupId">[];
 }
 
-interface ItemClaim extends Pick<PrismaItemClaim, "id" | "purchased" | "quantity" | "listId"> {
+interface ItemClaim extends Pick<PrismaItemClaim, "id" | "purchased" | "quantity" | "listId" | "claimedPrice" | "claimedCurrency"> {
     claimedBy: UserWithGroups | null;
     publicClaimedBy: Pick<SystemUser, "id" | "name"> | null;
 }
@@ -57,14 +57,22 @@ export const toItemOnListDTO = (item: FullItem, listId: string) => {
                     quantity: claim.quantity,
                     claimedBy,
                     purchased: claim.purchased,
-                    listId: claim.listId
+                    listId: claim.listId,
+                    claimedPrice:
+                        claim.claimedPrice !== null && claim.claimedCurrency
+                            ? { value: claim.claimedPrice, currency: claim.claimedCurrency }
+                            : undefined
                 };
             }
             return {
                 claimId: claim.id,
                 quantity: claim.quantity,
                 publicClaimedBy: claim.publicClaimedBy!,
-                listId: claim.listId
+                listId: claim.listId,
+                claimedPrice:
+                    claim.claimedPrice !== null && claim.claimedCurrency
+                        ? { value: claim.claimedPrice, currency: claim.claimedCurrency }
+                        : undefined
             };
         }),
         listCount: _count.lists,

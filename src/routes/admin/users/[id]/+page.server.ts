@@ -24,6 +24,7 @@ export const load: PageServerLoad = async ({ params }) => {
             id: true,
             role: {
                 select: {
+                    id: true,
                     name: true
                 }
             }
@@ -79,6 +80,34 @@ export const actions: Actions = {
         return { success: true, url: null };
     },
     "remove-admin": async ({ params }) => {
+        await requireRole(Role.ADMIN);
+
+        await client.user.update({
+            where: {
+                id: params.id
+            },
+            data: {
+                roleId: Role.BUYER
+            }
+        });
+
+        return { success: true, url: null };
+    },
+    "set-buyer": async ({ params }) => {
+        await requireRole(Role.ADMIN);
+
+        await client.user.update({
+            where: {
+                id: params.id
+            },
+            data: {
+                roleId: Role.BUYER
+            }
+        });
+
+        return { success: true, url: null };
+    },
+    "set-user": async ({ params }) => {
         await requireRole(Role.ADMIN);
 
         await client.user.update({

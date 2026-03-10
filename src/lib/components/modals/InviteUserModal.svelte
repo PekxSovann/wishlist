@@ -18,19 +18,27 @@
 
     let open = $state(false);
     let userEmail: string | undefined = $state();
-    let selectedGroup: string | undefined = $state(defaultGroup?.id);
+    let selectedGroup: string | string[] | undefined = $state(defaultGroup?.id);
     let emailError = $state(false);
     let groupError = $state(false);
 
+    const getSelectedGroupId = () => {
+        if (Array.isArray(selectedGroup)) {
+            return selectedGroup[0];
+        }
+        return selectedGroup;
+    };
+
     const onFormSubmit = async (method: InviteMethod) => {
-        if (selectedGroup && selectedGroup[0] && (method === "link" || !smtpEnabled || userEmail)) {
-            onSubmit?.({ group: selectedGroup[0], email: userEmail, method });
+        const groupId = getSelectedGroupId();
+        if (groupId && (method === "link" || !smtpEnabled || userEmail)) {
+            onSubmit?.({ group: groupId, email: userEmail, method });
             resetForm();
             open = false;
         } else {
             open = true;
             emailError = smtpEnabled && !userEmail;
-            groupError = !selectedGroup;
+            groupError = !groupId;
         }
     };
 

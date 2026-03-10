@@ -49,6 +49,15 @@ export const POST: RequestHandler = async ({ url, request }) => {
             error(401, $t("errors.not-authorized"));
         }
     }
+    if (data.data.group) {
+        const group = await client.group.findUnique({
+            where: { id: data.data.group },
+            select: { id: true }
+        });
+        if (!group) {
+            error(400, $t("errors.must-select-a-group"));
+        }
+    }
 
     const token = await generateToken();
     const tokenUrl = new URL(`/signup?token=${token}`, url);

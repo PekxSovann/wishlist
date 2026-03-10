@@ -5,7 +5,7 @@ import type { PageServerLoad } from "./$types";
 import { requireAdminOrManager } from "$lib/server/auth";
 
 export const load = (async ({ params }) => {
-    await requireAdminOrManager(params.groupId);
+    const authUser = await requireAdminOrManager(params.groupId);
 
     const group = await client.group
         .findUniqueOrThrow({
@@ -48,6 +48,7 @@ export const load = (async ({ params }) => {
 
     return {
         group,
-        config
+        config,
+        canEditRoles: authUser.roleId === Role.ADMIN
     };
 }) satisfies PageServerLoad;

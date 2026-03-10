@@ -24,6 +24,8 @@ export const getItemInclusions = (listId?: string) => {
                 quantity: true,
                 purchased: true,
                 listId: true,
+                claimedPrice: true,
+                claimedCurrency: true,
                 claimedBy: {
                     select: {
                         id: true,

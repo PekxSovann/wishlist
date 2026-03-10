@@ -12,6 +12,7 @@
         name: string;
         email?: string;
         isAdmin: boolean;
+        roleName?: string;
     };
 
     type UserWithGroups = User & { groups?: string[] };
@@ -26,7 +27,7 @@
     const { users, currentUser, config, groups }: Props = $props();
     const t = getFormatter();
 
-    const headers = [$t("auth.name"), $t("auth.username"), $t("auth.email"), $t("admin.admin"), $t("admin.groups")];
+    const headers = [$t("auth.name"), $t("auth.username"), $t("auth.email"), "Role", $t("admin.admin"), $t("admin.groups")];
 
     let usersFiltered: UserWithGroups[] = $derived(users);
 
@@ -57,6 +58,7 @@
                     <td class="text-nowrap">{user.name}</td>
                     <td>{user.username}</td>
                     <td>{user.email}</td>
+                    <td>{user.roleName}</td>
                     <td class="text-center">
                         {#if user.isAdmin}
                             <iconify-icon class="text-lg" icon="ion:checkmark"></iconify-icon>

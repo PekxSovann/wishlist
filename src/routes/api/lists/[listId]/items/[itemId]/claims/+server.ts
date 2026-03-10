@@ -45,14 +45,15 @@ export const PUT: RequestHandler = async ({ locals, request, params }) => {
         error(404, $t("errors.list-not-found"));
     }
 
-    if (isNaN(parseInt(params.itemId))) {
-        error(400, $t("errors.item-id-must-be-a-number"));
-    }
-
     const item = await client.item.findUnique({
         select: {
             id: true,
             quantity: true,
+            itemPrice: {
+                select: {
+                    currency: true
+                }
+            },
             claims: {
                 select: {
                     quantity: true
@@ -60,7 +61,7 @@ export const PUT: RequestHandler = async ({ locals, request, params }) => {
             }
         },
         where: {
-            id: parseInt(params.itemId),
+            id: params.itemId,
             lists: {
                 some: {
                     listId: list.id
@@ -84,6 +85,8 @@ export const PUT: RequestHandler = async ({ locals, request, params }) => {
     }
 
     try {
+        const fallbackCurrency = item.itemPrice?.currency?.toUpperCase();
+        const claimedCurrency = updateData.data.claimedCurrency?.toUpperCase() ?? fallbackCurrency ?? null;
         const data: Prisma.ItemClaimCreateInput = {
             item: {
                 connect: {
@@ -95,7 +98,9 @@ export const PUT: RequestHandler = async ({ locals, request, params }) => {
                     id: list.id
                 }
             },
-            quantity: updateData.data.quantity
+            quantity: updateData.data.quantity,
+            claimedPrice: updateData.data.claimedPrice,
+            claimedCurrency
         };
         if (updateData.data.claimedById) {
             data.claimedBy = {

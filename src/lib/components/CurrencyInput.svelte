@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { Combobox, Portal, useListCollection, type ComboboxRootProps } from "@skeletonlabs/skeleton-svelte";
     import { getFormatter as getPriceFormatter, getLocaleConfig } from "$lib/price-formatter";
     import type { KeyboardEventHandler } from "svelte/elements";
     import { onMount } from "svelte";
@@ -24,6 +25,18 @@
     let inputElement: HTMLInputElement | undefined = $state();
     let isMounted = $state(false);
     let previousCurrency = currency;
+    let currencySearch = $state(currency);
+    const availableCurrencies = (
+        "supportedValuesOf" in Intl ? Intl.supportedValuesOf("currency") : ["USD", "EUR", "GBP", "CAD", "AUD", "JPY"]
+    )
+        .map((c) => c.toUpperCase())
+        .toSorted();
+    const collection = $derived(
+        useListCollection({
+            items: availableCurrencies
+        })
+    );
+    let filteredCurrencies: string[] = $state(availableCurrencies);
 
     onMount(() => {
         isMounted = true;
@@ -80,59 +93,117 @@
         displayValue = inputtedValue;
     };
 
-    const validateCurrency = (
-        e: Event & {
-            currentTarget: EventTarget & HTMLInputElement;
-        }
-    ) => {
-        if (!e.currentTarget.value) {
+    const getCurrencyMatches = (query: string) => {
+        const q = query.trim().toUpperCase();
+        return q ? availableCurrencies.filter((currencyCode) => currencyCode.includes(q)) : availableCurrencies;
+    };
+
+    const setCurrency = (input: string, notify = true) => {
+        const nextCurrency = input.trim().toUpperCase();
+        if (!nextCurrency) {
             currency = previousCurrency;
-            toaster.info({
-                description: $t("errors.price-must-have-a-currency")
-            });
+            currencySearch = previousCurrency;
+            if (notify) {
+                toaster.info({
+                    description: $t("errors.price-must-have-a-currency")
+                });
+            }
             return;
         }
         try {
-            Intl.NumberFormat(undefined, { style: "currency", currency: e.currentTarget.value });
-            currency = e.currentTarget.value.toUpperCase();
+            Intl.NumberFormat(undefined, { style: "currency", currency: nextCurrency });
+            currency = nextCurrency;
+            currencySearch = nextCurrency;
         } catch {
-            e.currentTarget.value = previousCurrency;
-            toaster.warning({
-                description: $t("errors.invalid-currency-code")
-            });
+            currencySearch = previousCurrency;
+            if (notify) {
+                toaster.warning({
+                    description: $t("errors.invalid-currency-code")
+                });
+            }
             return;
         }
         previousCurrency = currency;
     };
+
+    const onInputValueChange: ComboboxRootProps["onInputValueChange"] = (event) => {
+        const next = event.inputValue.toUpperCase();
+        currencySearch = next;
+        filteredCurrencies = getCurrencyMatches(next);
+        if (event.reason === "item-select") {
+            setCurrency(event.inputValue);
+        }
+    };
+
+    const onOpenChange: ComboboxRootProps["onOpenChange"] = (event) => {
+        if (event.open) {
+            currencySearch = "";
+            filteredCurrencies = availableCurrencies;
+        }
+    };
 </script>
 
-<div class="input-group grid-cols-[auto_1fr_auto]">
-    <div class="ig-cell preset-tonal">
-        <iconify-icon icon="ion:pricetag"></iconify-icon>
+<div class="flex gap-2">
+    <div class="input-group grid grow grid-cols-[auto_1fr]">
+        <div class="ig-cell preset-tonal">
+            <iconify-icon icon="ion:pricetag"></iconify-icon>
+        </div>
+        <input
+            bind:this={inputElement}
+            id={`formatted-${id}`}
+            name={`formatted-${name}`}
+            class="ig-input"
+            autocomplete="off"
+            {disabled}
+            inputmode={maximumFractionDigits > 0 ? "decimal" : "numeric"}
+            onblur={handleBlur}
+            onfocus={handleFocus}
+            onkeydown={handleKeyDown}
+            placeholder={formatter.format(0)}
+            type="text"
+            bind:value={displayValue}
+        />
     </div>
-    <input
-        bind:this={inputElement}
-        id={`formatted-${id}`}
-        name={`formatted-${name}`}
-        class="ig-input"
-        autocomplete="off"
-        {disabled}
-        inputmode={maximumFractionDigits > 0 ? "decimal" : "numeric"}
-        onblur={handleBlur}
-        onfocus={handleFocus}
-        onkeydown={handleKeyDown}
-        placeholder={formatter.format(0)}
-        type="text"
-        bind:value={displayValue}
-    />
-    <input
-        class="ig-input w-[8ch] uppercase"
-        data-testid="currency"
-        maxlength="3"
-        onchange={validateCurrency}
-        type="text"
-        value={currency}
-    />
+    <Combobox
+        class="w-[9ch] shrink-0 gap-0"
+        {collection}
+        inputBehavior="autohighlight"
+        {onInputValueChange}
+        {onOpenChange}
+        openOnClick
+        placeholder={currency}
+    >
+        <Combobox.Control>
+            <Combobox.Input>
+                {#snippet element(props)}
+                    <input
+                        {...props}
+                        class="input h-full w-full rounded uppercase"
+                        data-testid="currency"
+                        maxlength="3"
+                        onblur={() => setCurrency(currencySearch, false)}
+                        spellcheck={false}
+                    />
+                {/snippet}
+            </Combobox.Input>
+            <Combobox.Trigger />
+        </Combobox.Control>
+        <Portal>
+            <Combobox.Positioner class="z-30!">
+                <Combobox.Content class="h-64 w-[10ch] overflow-auto">
+                    {#if filteredCurrencies.length === 0}
+                        <div class="px-2 py-1 text-xs opacity-70">No matches</div>
+                    {:else}
+                        {#each filteredCurrencies as item (item)}
+                            <Combobox.Item class="list-option w-full uppercase" {item}>
+                                <Combobox.ItemText>{item}</Combobox.ItemText>
+                            </Combobox.Item>
+                        {/each}
+                    {/if}
+                </Combobox.Content>
+            </Combobox.Positioner>
+        </Portal>
+    </Combobox>
 </div>
 
 <input {id} {name} {disabled} type="hidden" bind:value />

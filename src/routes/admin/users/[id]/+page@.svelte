@@ -34,6 +34,7 @@
     <hr class="hr" />
     <h2 class="h2">{$t("admin.username-field", { values: { username: data.editingUser.username } })}</h2>
     <h3 class="h3">{$t("admin.id-field", { values: { id: data.editingUser.id } })}</h3>
+    <h3 class="h3">Role: {data.editingUser.role.name}</h3>
 </div>
 
 <form method="POST" use:enhance>
@@ -48,6 +49,16 @@
         {:else}
             <button class="preset-tonal-secondary border-secondary-500 btn w-fit border" formaction="?/make-admin">
                 {$t("admin.make-admin")}
+            </button>
+        {/if}
+        {#if data.editingUser.role.id !== 1}
+            <button class="preset-tonal-secondary border-secondary-500 btn w-fit border" formaction="?/set-user">
+                {$t("admin.set-user-role")}
+            </button>
+        {/if}
+        {#if data.editingUser.role.id !== 4}
+            <button class="preset-tonal-secondary border-secondary-500 btn w-fit border" formaction="?/set-buyer">
+                {$t("admin.set-buyer-role")}
             </button>
         {/if}
         <ConfirmModal

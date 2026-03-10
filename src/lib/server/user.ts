@@ -12,6 +12,17 @@ interface UserMinimal extends Pick<User, "username" | "email" | "name"> {
 export const createUser = async (user: UserMinimal, role: Role, password: string, signupTokenId?: string) => {
     const config = await getConfig();
     const userCount = await client.user.count();
+    const roleName = Role[role];
+    if (roleName) {
+        await client.role.upsert({
+            where: { id: role },
+            update: {},
+            create: {
+                id: role,
+                name: roleName
+            }
+        });
+    }
 
     let groupId = config.defaultGroup;
     if (signupTokenId) {

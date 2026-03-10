@@ -12,8 +12,18 @@ export const navItems = [
         icon: "ion:gift"
     },
     {
+        labelKey: "app.all-items",
+        href: () => resolve("/all-items"),
+        icon: "ion:grid"
+    },
+    {
         labelKey: "app.my-claims",
         href: () => resolve("/claims"),
         icon: "ion:albums"
+    },
+    {
+        labelKey: "app.my-payments",
+        href: () => resolve("/payments"),
+        icon: "ion:wallet"
     }
 ] satisfies NavItem[];
