@@ -81,8 +81,9 @@
         return null;
     };
 
-    const triggerToast = () => {
-        toaster.warning({ description: $t("errors.unable-to-find-product-information") });
+    const triggerToast = (detail?: string) => {
+        const baseMessage = $t("errors.unable-to-find-product-information");
+        toaster.warning({ description: detail ? `${baseMessage} (${detail})` : baseMessage });
     };
 
     const getInfo = async () => {
@@ -91,7 +92,9 @@
             const url = extractUrl(productData.url);
             const res = await fetch(`/api/product?url=${url}`);
             if (res.ok) {
-                let newProductData: ProductData = await res.json();
+                let newProductData = (await res.json()) as ProductData & {
+                    _diagnostic?: { message?: string; reason?: string; status?: number; hostname?: string };
+                };
                 productData.url = newProductData.url ? newProductData.url : url;
                 productData.name = newProductData.name ? newProductData.name : newProductData.title || "";
                 if (newProductData.image) {
@@ -118,6 +121,16 @@
                         value: newProductData.price
                     };
                     price = newProductData.price;
+                }
+
+                const gotMetadata = Boolean(
+                    newProductData.name || newProductData.title || newProductData.image || newProductData.price
+                );
+                if (!gotMetadata && newProductData._diagnostic?.message) {
+                    const statusMessage = newProductData._diagnostic.status
+                        ? `HTTP ${newProductData._diagnostic.status}`
+                        : newProductData._diagnostic.reason;
+                    triggerToast(`${newProductData._diagnostic.message}${statusMessage ? ` [${statusMessage}]` : ""}`);
                 }
             } else {
                 triggerToast();

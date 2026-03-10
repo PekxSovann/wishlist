@@ -11,6 +11,14 @@ import { requireLoginOrError } from "$lib/server/auth";
 import { logger } from "$lib/server/logger";
 
 const scraper = metascraper([shopping(), metascraperTitle(), metascraperImage()]);
+type ProductDiagnostic = {
+    fallback: true;
+    reason: "captcha_blocked" | "fetch_failed" | "scraper_failed";
+    message: string;
+    status?: number;
+    stage?: "fetch" | "scrape";
+    hostname: string;
+};
 
 const goShopping = async (targetUrl: URL, locales: string[]) => {
     const resp = await fetch(targetUrl, {
@@ -30,6 +38,15 @@ const goShopping = async (targetUrl: URL, locales: string[]) => {
 
 const isCaptchaResponse = (metadata: Metadata) => {
     return metadata.image && metadata.image.toLocaleLowerCase().indexOf("captcha") >= 0;
+};
+
+const makeFallback = (targetUrl: URL, diagnostic: ProductDiagnostic) => {
+    return new Response(
+        JSON.stringify({
+            url: targetUrl.toString(),
+            _diagnostic: diagnostic
+        })
+    );
 };
 
 const getUrlOrError = async (url: string) => {
@@ -60,7 +77,13 @@ export const GET: RequestHandler = async ({ request, url }) => {
             }
             if (isCaptchaResponse(metadata)) {
                 logger.warn({ targetUrl: targetUrl.toString() }, "Product metadata blocked by captcha, using fallback");
-                return new Response(JSON.stringify({ url: targetUrl.toString() }));
+                return makeFallback(targetUrl, {
+                    fallback: true,
+                    reason: "captcha_blocked",
+                    message: "This site blocked metadata extraction (captcha/anti-bot). Fill item details manually.",
+                    stage: "scrape",
+                    hostname: targetUrl.hostname
+                });
             }
 
             if (metadata.url == metadata.image) {
@@ -74,7 +97,20 @@ export const GET: RequestHandler = async ({ request, url }) => {
             }
 
             logger.warn({ err, targetUrl: encodedUrl }, "Unable to fetch product metadata");
-            return new Response(JSON.stringify({ url: encodedUrl }));
+            const targetUrl = await getUrlOrError(encodedUrl);
+            const errMsg = err instanceof Error ? err.message : String(err);
+            const fetchStatus = errMsg.match(/Unable to fetch url: (\d+)/)?.[1];
+            const status = fetchStatus ? Number.parseInt(fetchStatus) : undefined;
+            return makeFallback(targetUrl, {
+                fallback: true,
+                reason: fetchStatus ? "fetch_failed" : "scraper_failed",
+                message: fetchStatus
+                    ? `Remote site returned HTTP ${fetchStatus} for metadata fetch. Fill item details manually.`
+                    : "Unable to extract product metadata from this page. Fill item details manually.",
+                stage: fetchStatus ? "fetch" : "scrape",
+                status,
+                hostname: targetUrl.hostname
+            });
         }
     } else {
         error(400, $t("errors.must-specify-url-in-query-parameters"));
