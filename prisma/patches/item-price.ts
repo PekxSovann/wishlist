@@ -44,7 +44,7 @@ if (isPatchApplied) {
             currency = symbolToCurrencyMap[symbol];
             console.log("Detected currency as %s", currency);
         } else {
-            currency = process.env.DEFAULT_CURRENCY || "USD";
+            currency = process.env.DEFAULT_CURRENCY || "JPY";
             console.log("No currency detected, defaulting to %s", currency);
         }
 

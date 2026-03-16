@@ -23,13 +23,13 @@ const getMaximumFractionDigits = (currency: string, locale?: string) => {
 
 export const getDefaultCurrency = () => {
     if (!env.PUBLIC_DEFAULT_CURRENCY) {
-        return "USD";
+        return "JPY";
     }
     try {
         new Intl.NumberFormat("en-US", { currency: env.PUBLIC_DEFAULT_CURRENCY });
     } catch {
         console.warn("Invalid currency: ", env.PUBLIC_DEFAULT_CURRENCY);
-        return "USD";
+        return "JPY";
     }
     return env.PUBLIC_DEFAULT_CURRENCY;
 };

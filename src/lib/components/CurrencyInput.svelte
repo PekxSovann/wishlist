@@ -15,7 +15,7 @@
         zIndex?: string;
     }
 
-    let { value = $bindable(null), currency = $bindable("USD"), name, id, disabled = false, zIndex = "z-30!" }: Props = $props();
+    let { value = $bindable(null), currency = $bindable("JPY"), name, id, disabled = false, zIndex = "z-30!" }: Props = $props();
     const t = getFormatter();
 
     let formatter = $derived(getPriceFormatter(currency));
