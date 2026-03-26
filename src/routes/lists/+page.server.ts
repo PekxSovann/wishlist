@@ -68,6 +68,7 @@ export const load = (async ({ url }) => {
                     item: {
                         select: {
                             quantity: true,
+                            itemPrice: true,
                             claims: {
                                 select: {
                                     listId: true,
@@ -146,6 +147,7 @@ export const load = (async ({ url }) => {
                         select: {
                             id: true,
                             quantity: true,
+                            itemPrice: true,
                             claims: {
                                 select: {
                                     id: true,
@@ -211,6 +213,20 @@ export const load = (async ({ url }) => {
                             {} as Record<string, { name: string; currency: string; total: number }>
                         )
                 );
+                const totalCostByCurrency = Object.entries(
+                    list.items
+                        .filter(({ item }) => item.itemPrice !== null)
+                        .reduce(
+                            (accum, { item }) => {
+                                accum[item.itemPrice!.currency] =
+                                    (accum[item.itemPrice!.currency] ||= 0) + item.itemPrice!.value * (item.quantity || 1);
+                                return accum;
+                            },
+                            {} as Record<string, number>
+                        )
+                )
+                    .map(([currency, total]) => ({ currency, total }))
+                    .toSorted((a, b) => b.total - a.total);
                 return {
                     id: list.id,
                     name: list.name,
@@ -220,6 +236,7 @@ export const load = (async ({ url }) => {
                     claimedCount: undefined,
                     itemCount: list.items.reduce((accum, { item }) => accum + (item.quantity || 1), 0),
                     unapprovedCount: list._count.items,
+                    totalCostByCurrency,
                     owedByClaimants
                 };
             }),
@@ -254,6 +271,20 @@ export const load = (async ({ url }) => {
                             {} as Record<string, { name: string; currency: string; total: number }>
                         )
                 );
+                const totalCostByCurrency = Object.entries(
+                    list.items
+                        .filter((it) => it.approved && it.item.itemPrice !== null)
+                        .reduce(
+                            (accum, { item }) => {
+                                accum[item.itemPrice!.currency] =
+                                    (accum[item.itemPrice!.currency] ||= 0) + item.itemPrice!.value * (item.quantity || 1);
+                                return accum;
+                            },
+                            {} as Record<string, number>
+                        )
+                )
+                    .map(([currency, total]) => ({ currency, total }))
+                    .toSorted((a, b) => b.total - a.total);
                 return {
                     id: list.id,
                     name: list.name,
@@ -263,6 +294,7 @@ export const load = (async ({ url }) => {
                     claimedCount,
                     itemCount,
                     items,
+                    totalCostByCurrency,
                     owedByClaimants
                 };
             }),

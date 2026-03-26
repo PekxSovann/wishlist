@@ -297,11 +297,11 @@
     </div>
 </div>
 
-{#if data.list.owner.isMe || data.list.isManager}
-    <div class="flex flex-wrap-reverse items-start justify-between gap-2 pb-4 print:hidden">
-        <ListStatistics {items} />
-        {#if data.listMode === "registry" || data.list.public}
-            <div class="flex flex-row gap-x-2">
+<div class="flex flex-wrap-reverse items-start justify-between gap-2 pb-4 print:hidden">
+    <ListStatistics {items} />
+    {#if data.list.owner.isMe || data.list.isManager}
+        <div class="flex flex-row gap-x-2">
+            {#if data.listMode === "registry" || data.list.public}
                 {#if publicListUrl}
                     <TokenCopy btnStyle="btn-xs" url={publicListUrl?.href}>
                         <span class="text-sm">{$t("wishes.public-url")}</span>
@@ -311,10 +311,10 @@
                         {$t("wishes.share")}
                     </button>
                 {/if}
-            </div>
-        {/if}
-    </div>
-{/if}
+            {/if}
+        </div>
+    {/if}
+</div>
 
 {#if (data.list.owner.isMe || data.list.isManager) && approvals.length > 0}
     <div class="flex flex-col space-y-4 pb-4 print:hidden">

@@ -2,13 +2,14 @@
     import type { List, User } from "$lib/generated/prisma/client";
     import Avatar from "./Avatar.svelte";
     import { getFormatter } from "$lib/i18n";
-    import { formatPlainNumber } from "$lib/price-formatter";
+    import { formatNumberAsPrice, formatPlainNumber } from "$lib/price-formatter";
 
     interface ListWithCounts extends Partial<Pick<List, "id" | "name" | "icon" | "iconColor">> {
         owner: Pick<User, "name" | "username" | "picture">;
         itemCount?: number;
         claimedCount?: number;
         unapprovedCount?: number;
+        totalCostByCurrency?: { currency: string; total: number }[];
         owedByClaimants?: { name: string; currency: string; total: number }[];
     }
 
@@ -65,6 +66,13 @@
             <span class="text-primary-900-100 line-clamp-2 text-2xl font-bold md:text-4xl" data-testid="list-name">
                 {listName}
             </span>
+            {#if list.totalCostByCurrency && list.totalCostByCurrency.length > 0}
+                <div class="flex flex-col gap-0.5">
+                    {#each list.totalCostByCurrency as total}
+                        <span class="subtext">{formatNumberAsPrice(total.currency, total.total)}</span>
+                    {/each}
+                </div>
+            {/if}
             <div class="flex flex-row flex-wrap items-center gap-2 text-lg">
                 <div class="flex flex-row items-center gap-2">
                     <Avatar class="text-tiny size-6" user={list.owner} />
