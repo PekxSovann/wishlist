@@ -9,7 +9,13 @@ interface UserMinimal extends Pick<User, "username" | "email" | "name"> {
     oauthId?: string | null;
 }
 
-export const createUser = async (user: UserMinimal, role: Role, password: string, signupTokenId?: string) => {
+export const createUser = async (
+    user: UserMinimal,
+    role: Role,
+    password: string,
+    signupTokenId?: string,
+    signupGroupId?: string
+) => {
     const config = await getConfig();
     const userCount = await client.user.count();
     const roleName = Role[role];
@@ -36,6 +42,8 @@ export const createUser = async (user: UserMinimal, role: Role, password: string
                 }
             })
             .then((data) => data?.groupId);
+    } else if (signupGroupId) {
+        groupId = signupGroupId;
     } else if (userCount === 0) {
         groupId = (
             await client.group.findFirst({

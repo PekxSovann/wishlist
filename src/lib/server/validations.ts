@@ -50,7 +50,8 @@ export const getSignupSchema = async () => {
         username: z.string().trim().min(1, $t("errors.username-must-not-be-blank")),
         email: z.email(),
         password: await passwordZxcvbn(security.passwordStrength),
-        tokenId: z.string().optional()
+        tokenId: z.string().optional(),
+        groupId: z.string().optional()
     });
 };
 

@@ -19,6 +19,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     const $t = await getFormatter();
     const config = await getConfig();
 
+    const groupId = url.searchParams.get("groupId");
     const token = url.searchParams.get("token");
     if (token) {
         const signup = await client.signupToken.findFirst({
@@ -44,6 +45,19 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         }
         error(400, $t("errors.invite-code-invalid"));
     }
+
+    if (groupId) {
+        const group = await client.group.findUnique({
+            where: { id: groupId },
+            select: { id: true }
+        });
+
+        if (group) {
+            return { valid: true, groupId: group.id };
+        }
+        error(400, $t("errors.invite-code-invalid"));
+    }
+
     if (!config.enableSignup) {
         error(401, $t("errors.this-instance-is-invite-only"));
     }
@@ -62,30 +76,46 @@ export const actions: Actions = {
         }
 
         const config = await getConfig();
+        const inviteGroup = signupData.data.groupId
+            ? await client.group.findUnique({
+                  where: { id: signupData.data.groupId },
+                  select: { id: true }
+              })
+            : null;
+
+        if (signupData.data.groupId && !inviteGroup) {
+            error(400, $t("errors.invite-code-invalid"));
+        }
 
         if (!config.enableSignup) {
-            if (!signupData.data.tokenId) {
+            if (!signupData.data.tokenId && !signupData.data.groupId) {
                 error(401, $t("errors.this-instance-is-invite-only"));
             }
-            const signup = await client.signupToken.findUnique({
-                where: {
-                    id: signupData.data.tokenId
-                },
-                select: {
-                    createdAt: true,
-                    redeemed: true,
-                    groupId: true
-                }
-            });
-            const group = signup
-                ? await client.group.findUnique({
-                      where: { id: signup.groupId },
-                      select: { id: true }
-                  })
-                : null;
+            if (signupData.data.tokenId) {
+                const signup = await client.signupToken.findUnique({
+                    where: {
+                        id: signupData.data.tokenId
+                    },
+                    select: {
+                        createdAt: true,
+                        redeemed: true,
+                        groupId: true
+                    }
+                });
+                const group = signup
+                    ? await client.group.findUnique({
+                          where: { id: signup.groupId },
+                          select: { id: true }
+                      })
+                    : null;
 
-            if (!signup || signup.redeemed || !validateToken(signup.createdAt) || !group) {
-                error(400, $t("errors.invite-code-invalid"));
+                if (!signup || signup.redeemed || !validateToken(signup.createdAt) || !group) {
+                    error(400, $t("errors.invite-code-invalid"));
+                }
+            } else if (signupData.data.groupId) {
+                if (!inviteGroup) {
+                    error(400, $t("errors.invite-code-invalid"));
+                }
             }
         }
 
@@ -99,7 +129,8 @@ export const actions: Actions = {
                 },
                 userCount > 0 ? Role.USER : Role.ADMIN,
                 signupData.data.password,
-                signupData.data.tokenId
+                signupData.data.tokenId,
+                signupData.data.groupId
             );
 
             const sessionToken = generateSessionToken();

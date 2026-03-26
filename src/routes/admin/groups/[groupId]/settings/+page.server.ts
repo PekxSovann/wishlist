@@ -34,6 +34,7 @@ export const load = (async ({ params }) => {
 
     return {
         config,
+        groupId: group.id,
         membershipCount,
         listCount
     };

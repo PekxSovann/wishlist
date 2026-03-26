@@ -22,6 +22,9 @@
     {#if data.id}
         <input id="tokenId" name="tokenId" class="hidden" value={data.id} />
     {/if}
+    {#if data.groupId}
+        <input id="groupId" name="groupId" class="hidden" value={data.groupId} />
+    {/if}
     <label class="label" for="name">
         <span>{$t("auth.name")}</span>
         <input
