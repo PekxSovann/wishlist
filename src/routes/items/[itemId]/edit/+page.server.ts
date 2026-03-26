@@ -115,13 +115,15 @@ export const actions: Actions = {
             }
         });
 
-        if (image && !isValidImage(image, ITEM_MAX_IMAGE_SIZE)) {
-            return fail(400, { error: true, message: "Item images must be 1 MB or smaller." });
+        const uploadedImage = image && image.size > 0 ? image : undefined;
+
+        if (uploadedImage && !isValidImage(uploadedImage, ITEM_MAX_IMAGE_SIZE)) {
+            return fail(400, { error: true, imageError: "Item images must be 1 MB or smaller." });
         }
 
         let newImageFile: string | undefined | null;
-        if (image) {
-            newImageFile = await createImage(name, image);
+        if (uploadedImage) {
+            newImageFile = await createImage(name, uploadedImage);
         } else if (imageUrl && item.imageUrl !== imageUrl) {
             newImageFile = await createImage(name, imageUrl);
         }

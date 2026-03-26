@@ -294,8 +294,8 @@
     <label class="label col-span-full md:col-span-3" for="image">
         <span>{$t("wishes.upload-image")} (1MB max)</span>
         <FileUpload name="image" class="py-1 pl-1" accept="image/*"></FileUpload>
-        {#if form?.error && form?.message}
-            <p class="text-invalid pt-2">{form.message}</p>
+        {#if form?.imageError}
+            <p class="text-invalid pt-2">{form.imageError}</p>
         {/if}
     </label>
 
