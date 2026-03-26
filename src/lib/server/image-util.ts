@@ -8,6 +8,7 @@ import { error } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
 
 const DEFAULT_MAX_IMAGE_SIZE = 5000000;
+export const ITEM_MAX_IMAGE_SIZE = 1000000;
 
 const slugify = (str: string) => {
     return str
@@ -35,10 +36,13 @@ const fetchImage = async (imageUrl: string) => {
     }
 };
 
-export const isValidImage = (image: File) => {
-    const maxImageSize = env.MAX_IMAGE_SIZE
+export const getMaxImageSize = () => {
+    return env.MAX_IMAGE_SIZE
         ? Number.parseInt(env.MAX_IMAGE_SIZE) || DEFAULT_MAX_IMAGE_SIZE
         : DEFAULT_MAX_IMAGE_SIZE;
+};
+
+export const isValidImage = (image: File, maxImageSize = getMaxImageSize()) => {
     return image.size > 0 && image.size <= maxImageSize;
 };
 

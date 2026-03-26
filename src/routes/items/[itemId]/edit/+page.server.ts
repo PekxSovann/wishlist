@@ -3,7 +3,7 @@ import type { Actions, PageServerLoad } from "./$types";
 import { client } from "$lib/server/prisma";
 import { getConfig } from "$lib/server/config";
 import { getActiveMembership } from "$lib/server/group-membership";
-import { createImage, isValidImage, tryDeleteImage } from "$lib/server/image-util";
+import { createImage, isValidImage, ITEM_MAX_IMAGE_SIZE, tryDeleteImage } from "$lib/server/image-util";
 import { itemEmitter } from "$lib/server/events/emitters";
 import { getMinorUnits } from "$lib/price-formatter";
 import { getFormatter, getLocale } from "$lib/server/i18n";
@@ -115,8 +115,12 @@ export const actions: Actions = {
             }
         });
 
+        if (image && !isValidImage(image, ITEM_MAX_IMAGE_SIZE)) {
+            return fail(400, { error: true, message: "Item images must be 1 MB or smaller." });
+        }
+
         let newImageFile: string | undefined | null;
-        if (image && isValidImage(image)) {
+        if (image) {
             newImageFile = await createImage(name, image);
         } else if (imageUrl && item.imageUrl !== imageUrl) {
             newImageFile = await createImage(name, imageUrl);
