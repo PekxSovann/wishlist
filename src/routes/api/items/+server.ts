@@ -8,10 +8,54 @@ import { itemEmitter } from "$lib/server/events/emitters";
 import type { Prisma } from "$lib/generated/prisma/client";
 import { patchItem } from "$lib/server/api-common";
 import { getFormatter } from "$lib/server/i18n";
-import { getItemInclusions } from "$lib/server/items";
+import { getAllItemsPage, getItemInclusions } from "$lib/server/items";
 import { ItemEvent } from "$lib/events";
 import { requireLoginOrError } from "$lib/server/auth";
 import { logger } from "$lib/server/logger";
+import { getActiveMembership } from "$lib/server/group-membership";
+import { decodeMultiValueFilter } from "$lib/server/sort-filter-util";
+
+const parsePositiveInteger = (value: string | null, defaultValue: number) => {
+    if (!value) return defaultValue;
+    const parsed = Number.parseInt(value, 10);
+    return Number.isNaN(parsed) || parsed < 0 ? defaultValue : parsed;
+};
+
+const parseOptionalPositiveInteger = (value: string | null) => {
+    if (!value) return undefined;
+    const parsed = Number.parseInt(value, 10);
+    return Number.isNaN(parsed) || parsed < 0 ? undefined : parsed;
+};
+
+export const GET: RequestHandler = async ({ url }) => {
+    const user = await requireLoginOrError();
+    const scope = url.searchParams.get("scope");
+
+    if (scope !== "all-items") {
+        error(400, "Invalid items scope");
+    }
+
+    if (user.roleId === Role.USER) {
+        error(403, "Not authorized");
+    }
+
+    const activeMembership = await getActiveMembership(user);
+    const userIdFilter = decodeMultiValueFilter(url.searchParams.get("users"));
+    const offset = parsePositiveInteger(url.searchParams.get("offset"), 0);
+    const take = parseOptionalPositiveInteger(url.searchParams.get("take"));
+
+    return new Response(
+        JSON.stringify(
+            await getAllItemsPage({
+                groupId: activeMembership.groupId,
+                userIdFilter,
+                offset,
+                take
+            })
+        ),
+        { status: 200 }
+    );
+};
 
 export const DELETE: RequestHandler = async ({ url }) => {
     const $t = await getFormatter();

@@ -16,15 +16,26 @@
     import { resolve } from "$app/paths";
     import Image from "$lib/components/Image.svelte";
     import { ListItemAPI } from "$lib/api/lists";
+    import { ItemsAPI } from "$lib/api/items";
     import { toaster } from "$lib/components/toaster";
 
     const { data }: PageProps = $props();
     const t = getFormatter();
+    const itemsApi = new ItemsAPI();
 
     let items: ItemOnListDTO[] = $state(data.items);
+    let loadedItemCount = $state(data.loadedItemCount);
+    let hasMoreItems = $state(data.hasMoreItems);
+    let loadingMoreItems = $state(false);
 
     $effect(() => {
         items = data.items;
+        loadedItemCount = data.loadedItemCount;
+        hasMoreItems = data.hasMoreItems;
+        loadingMoreItems = false;
+        selectedItemKeys = new Set();
+        paidPriceByKey = {};
+        quantityByKey = {};
     });
 
     initListViewPreference(data.initialViewPreference);
@@ -59,6 +70,36 @@
     const editItem = async (itemId: string) => {
         const redirectTo = encodeURIComponent(page.url.pathname + page.url.search);
         await goto(`/items/${itemId}/edit?redirectTo=${redirectTo}`);
+    };
+    const loadMoreItems = async () => {
+        if (loadingMoreItems || !hasMoreItems) return;
+
+        loadingMoreItems = true;
+
+        try {
+            const response = await itemsApi.getAllItemsPage({
+                offset: loadedItemCount,
+                users: page.url.searchParams.get("users")
+            });
+
+            if (!response.ok) {
+                throw new Error("Unable to load more items");
+            }
+
+            const nextPage = (await response.json()) as {
+                items: ItemOnListDTO[];
+                loadedItemCount: number;
+                hasMore: boolean;
+            };
+
+            items = [...items, ...nextPage.items];
+            loadedItemCount = nextPage.loadedItemCount;
+            hasMoreItems = nextPage.hasMore;
+        } catch {
+            toaster.error({ description: "Unable to load more items" });
+        } finally {
+            loadingMoreItems = false;
+        }
     };
     const getItemImageUrl = (item: ItemOnListDTO): string | undefined => {
         if (!item.imageUrl) return;
@@ -287,6 +328,13 @@
                 </div>
             {/each}
         </div>
+        {#if hasMoreItems}
+            <div class="flex justify-center pt-2">
+                <button class="btn preset-tonal" disabled={loadingMoreItems} onclick={loadMoreItems} type="button">
+                    {loadingMoreItems ? "Loading..." : "Load more items"}
+                </button>
+            </div>
+        {/if}
     </div>
 {/if}
 

@@ -60,4 +60,16 @@ export class ItemsAPI {
     updateMany = async (items: (Record<string, unknown> & { id: string })[]) => {
         return await this._makeRequest("PATCH", "", items);
     };
+
+    getAllItemsPage = async ({ offset, take, users }: { offset: number; take?: number; users?: string | null }) => {
+        const searchParams = new URLSearchParams({
+            scope: "all-items",
+            offset: `${offset}`
+        });
+
+        if (take) searchParams.append("take", `${take}`);
+        if (users) searchParams.append("users", users);
+
+        return await this._makeRequest("GET", `?${searchParams.toString()}`);
+    };
 }

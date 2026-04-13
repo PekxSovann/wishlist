@@ -1,12 +1,11 @@
 import type { PageServerLoad } from "./$types";
-import { client } from "$lib/server/prisma";
 import { getActiveMembership } from "$lib/server/group-membership";
-import { toItemOnListDTO } from "$lib/dtos/item-mapper";
 import { requireLogin } from "$lib/server/auth";
 import { decodeMultiValueFilter } from "$lib/server/sort-filter-util";
 import { getConfig } from "$lib/server/config";
 import { redirect } from "@sveltejs/kit";
 import { Role } from "$lib/schema";
+import { getAllItemsPage } from "$lib/server/items";
 
 export const load: PageServerLoad = async ({ url, cookies }) => {
     const user = requireLogin();
@@ -18,101 +17,11 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 
     const userIdFilter = decodeMultiValueFilter(url.searchParams.get("users"));
 
-    const items = await client.item.findMany({
-        where: {
-            lists: {
-                some: {
-                    approved: true,
-                    list: {
-                        groupId: activeMembership.groupId,
-                        ownerId: userIdFilter.length > 0 ? { in: userIdFilter } : undefined
-                    }
-                }
-            }
-        },
-        include: {
-            lists: {
-                select: {
-                    listId: true,
-                    approved: true,
-                    displayOrder: true,
-                    addedBy: {
-                        select: {
-                            id: true,
-                            name: true
-                        }
-                    }
-                },
-                where: {
-                    approved: true,
-                    list: {
-                        groupId: activeMembership.groupId,
-                        ownerId: userIdFilter.length > 0 ? { in: userIdFilter } : undefined
-                    }
-                }
-            },
-            claims: {
-                select: {
-                    id: true,
-                    listId: true,
-                    purchased: true,
-                    quantity: true,
-                    claimedPrice: true,
-                    claimedCurrency: true,
-                    claimedNote: true,
-                    claimedBy: {
-                        select: {
-                            id: true,
-                            name: true,
-                            UserGroupMembership: {
-                                select: {
-                                    groupId: true
-                                }
-                            }
-                        }
-                    },
-                    publicClaimedBy: {
-                        select: {
-                            id: true,
-                            name: true
-                        }
-                    }
-                },
-                where: {
-                    list: {
-                        groupId: activeMembership.groupId
-                    }
-                }
-            },
-            buyerNotes: {
-                select: {
-                    id: true,
-                    note: true,
-                    userId: true,
-                    user: {
-                        select: {
-                            id: true,
-                            name: true
-                        }
-                    }
-                }
-            },
-            user: {
-                select: {
-                    id: true,
-                    name: true
-                }
-            },
-            itemPrice: true,
-            _count: {
-                select: {
-                    lists: true
-                }
-            }
-        }
+    const allItemsPage = await getAllItemsPage({
+        groupId: activeMembership.groupId,
+        userIdFilter,
+        offset: 0
     });
-
-    const itemDTOs = items.flatMap((item) => item.lists.map((list) => toItemOnListDTO(item, list.listId)));
     const viewPreference = cookies.get("listViewPreference") as "list" | "tile" | undefined;
 
     return {
@@ -120,7 +29,10 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
             ...user,
             activeGroupId: activeMembership.groupId
         },
-        items: itemDTOs,
+        items: allItemsPage.items,
+        loadedItemCount: allItemsPage.loadedItemCount,
+        hasMoreItems: allItemsPage.hasMore,
+        totalItemCount: allItemsPage.totalCount,
         showClaimedName: config.claims.showName,
         showNameAcrossGroups: config.claims.showNameAcrossGroups,
         showClaimForOwner: config.claims.showForOwner,
