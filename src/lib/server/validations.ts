@@ -88,7 +88,8 @@ export const settingSchema = z.object({
 });
 
 export const publicListCreateSchema = z.object({
-    public: z.boolean().optional()
+    public: z.boolean().optional(),
+    isPrivate: z.boolean().optional()
 });
 
 export const getListPropertiesSchema = () => {

@@ -7,9 +7,10 @@ import { getById } from "$lib/server/list";
 import type { Prisma } from "$lib/generated/prisma/client";
 import type { RequestHandler } from "./$types";
 import { requireLoginOrError } from "$lib/server/auth";
+import { Role } from "$lib/schema";
 
 export const PATCH: RequestHandler = async ({ request, params }) => {
-    await requireLoginOrError();
+    const user = await requireLoginOrError();
     const $t = await getFormatter();
 
     const list = await getById(params.listId);
@@ -18,19 +19,33 @@ export const PATCH: RequestHandler = async ({ request, params }) => {
     }
 
     const config = await getConfig(list.groupId);
-    if (config.listMode !== "registry") {
-        error(422, $t("errors.group-is-not-in-registry-mode-cannot-get-a-public-link"));
-    }
-
     const data = await request.json().then(publicListCreateSchema.safeParse);
 
     if (!data.success) {
         error(422, data.error.message);
     }
+
     const publicList = data.data.public;
+    const privateList = data.data.isPrivate;
+    const isPrivacyConversion = privateList === true || (publicList === true && list.isPrivate);
+
+    if (isPrivacyConversion) {
+        if (![Role.BUYER, Role.ADMIN].includes(user.roleId)) {
+            error(401, $t("errors.not-authorized"));
+        }
+    } else if (config.listMode !== "registry") {
+        error(422, $t("errors.group-is-not-in-registry-mode-cannot-get-a-public-link"));
+    }
 
     const updateData: Prisma.ListUpdateInput = {};
     if (publicList !== undefined) updateData.public = publicList;
+    if (privateList === true) {
+        updateData.isPrivate = true;
+        updateData.public = false;
+    } else if (publicList === true && list.isPrivate) {
+        updateData.isPrivate = false;
+        updateData.public = true;
+    }
 
     const updatedList = await client.list.update({
         where: {

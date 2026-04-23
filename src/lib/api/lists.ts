@@ -25,7 +25,11 @@ export class ListAPI {
     };
 
     makePublic = async () => {
-        return await this._makeRequest("PATCH", "/", { public: true });
+        return await this._makeRequest("PATCH", "", { public: true });
+    };
+
+    makePrivate = async () => {
+        return await this._makeRequest("PATCH", "", { isPrivate: true });
     };
 
     updateItems = async (data: z.infer<typeof listItemsUpdateSchema>[]) => {

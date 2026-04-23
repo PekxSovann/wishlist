@@ -2,7 +2,7 @@
     import type { PageProps } from "./$types";
     import ItemCard from "$lib/components/wishlists/ItemCard/ItemCard.svelte";
     import ClaimFilterChip from "$lib/components/wishlists/chips/ClaimFilter.svelte";
-    import { goto, invalidate } from "$app/navigation";
+    import { goto, invalidate, invalidateAll } from "$app/navigation";
     import { page } from "$app/state";
     import { onMount } from "svelte";
     import { flip } from "svelte/animate";
@@ -175,6 +175,30 @@
         publicListUrl = new URL(`/lists/${data.list.id}`, window.location as unknown as URL);
     };
 
+    const makeListPrivate = async () => {
+        const response = await listAPI.makePrivate();
+        if (!response.ok) {
+            const description = await response.text();
+            toaster.error({ description });
+            return;
+        }
+
+        toaster.info({ description: $t("wishes.list-was-made-private") });
+        await invalidateAll();
+    };
+
+    const makeListPublic = async () => {
+        const response = await listAPI.makePublic();
+        if (!response.ok) {
+            const description = await response.text();
+            toaster.error({ description });
+            return;
+        }
+
+        toaster.info({ description: $t("wishes.list-was-made-public") });
+        await invalidateAll();
+    };
+
     // custom dnd action to remove the aria disabled flag
     function dndZone<T extends Item>(
         node: HTMLElement,
@@ -294,6 +318,18 @@
             <ReorderChip onFinalize={handleReorderFinalize} bind:reordering />
             <ManageListChip onclick={() => goto(`${new URL(page.url).pathname}/manage`)} />
         {/if}
+        {#if data.canMakePrivate}
+            <button class="preset-filled-primary-500 chip" onclick={makeListPrivate} type="button">
+                <iconify-icon icon="ion:lock-closed"></iconify-icon>
+                <span>{$t("wishes.make-private")}</span>
+            </button>
+        {/if}
+        {#if data.canMakePublic}
+            <button class="preset-filled-primary-500 chip" onclick={makeListPublic} type="button">
+                <iconify-icon icon="ion:lock-open"></iconify-icon>
+                <span>{$t("wishes.make-public")}</span>
+            </button>
+        {/if}
     </div>
 </div>
 
@@ -301,7 +337,7 @@
     <ListStatistics {items} />
     {#if data.list.owner.isMe || data.list.isManager}
         <div class="flex flex-row gap-x-2">
-            {#if data.listMode === "registry" || data.list.public}
+            {#if (data.list.owner.isMe || data.list.isManager) && (data.listMode === "registry" || data.list.public)}
                 {#if publicListUrl}
                     <TokenCopy btnStyle="btn-xs" url={publicListUrl?.href}>
                         <span class="text-sm">{$t("wishes.public-url")}</span>

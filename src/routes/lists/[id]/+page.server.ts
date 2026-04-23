@@ -28,10 +28,13 @@ export const load = (async ({ params, url, locals, depends, cookies }) => {
             error(404, $t("errors.list-not-found"));
         }
         if (list.isPrivate) {
-            if (list.groupId !== activeMembership.groupId) {
+            if (list.groupId !== activeMembership.groupId && locals.user.roleId !== Role.ADMIN) {
                 error(401, $t("errors.user-must-be-in-the-correct-group"));
             }
-            if (list.owner.id !== locals.user.id && locals.user.roleId !== Role.ADMIN) {
+            if (
+                list.owner.id !== locals.user.id &&
+                ![Role.BUYER, Role.ADMIN].includes(locals.user.roleId)
+            ) {
                 error(404, $t("errors.list-not-found"));
             }
         } else if (!list.public && list.groupId !== activeMembership.groupId) {
@@ -73,6 +76,15 @@ export const load = (async ({ params, url, locals, depends, cookies }) => {
             isManager: list.managers.find(({ userId }: any) => userId === locals.user?.id) !== undefined,
             items
         },
+        canMakePrivate:
+            !!locals.user &&
+            !list.isPrivate &&
+            [Role.BUYER, Role.ADMIN].includes(locals.user.roleId),
+        canMakePublic:
+            !!locals.user &&
+            !list.public &&
+            list.isPrivate &&
+            [Role.BUYER, Role.ADMIN].includes(locals.user.roleId),
         loggedInUser: locals.user
             ? {
                   id: locals.user.id,
