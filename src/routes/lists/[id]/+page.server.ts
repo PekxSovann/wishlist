@@ -2,7 +2,7 @@ import { error, redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 import { getConfig } from "$lib/server/config";
 import { getFormatter } from "$lib/server/i18n";
-import { getById, getItems, type GetItemsOptions } from "$lib/server/list";
+import { getAvailableLists, getById, getItems, type GetItemsOptions } from "$lib/server/list";
 import { getActiveMembership } from "$lib/server/group-membership";
 import type { UserGroupMembership } from "$lib/generated/prisma/client";
 import { Role } from "$lib/schema";
@@ -58,7 +58,12 @@ export const load = (async ({ params, url, locals, depends, cookies }) => {
         loggedInUserId: locals.user?.id || null
     };
 
-    const items = await getItems(list.id, options);
+    const [items, availableLists] = await Promise.all([
+        getItems(list.id, options),
+        locals.user && list.owner.id === locals.user.id
+            ? getAvailableLists(list.owner.id, locals.user.id).then((lists) => lists.filter(({ id }) => id !== list.id))
+            : Promise.resolve([])
+    ]);
 
     depends("data:items");
 
@@ -93,6 +98,7 @@ export const load = (async ({ params, url, locals, depends, cookies }) => {
                   activeGroupId: activeMembership!.groupId
               }
             : undefined,
+        availableLists,
         listMode: config.listMode,
         showClaimedName: config.claims.showName,
         showNameAcrossGroups: config.claims.showNameAcrossGroups,

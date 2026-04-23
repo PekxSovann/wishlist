@@ -21,6 +21,9 @@
         onDecreasePriority?: ItemVoidFunction;
         onPriorityChange?: (item: ItemOnListDTO, idx: string) => void;
         isTileView?: boolean;
+        selectable?: boolean;
+        selected?: boolean;
+        onSelect?: ItemVoidFunction;
     }
 
     export interface InternalItemCardProps {
@@ -70,7 +73,10 @@
         onIncreasePriority = undefined,
         onDecreasePriority = undefined,
         onPriorityChange,
-        isTileView = false
+        isTileView = false,
+        selectable = false,
+        selected = false,
+        onSelect
     }: ItemCardProps = $props();
 
     const id = $props.id();
@@ -129,15 +135,23 @@
     class={[
         "card preset-filled-surface-100-900 inset-ring-surface-200-800 block h-full w-full text-start inset-ring print:break-inside-avoid print:shadow-none",
         !item.approved && "preset-tonal-warning inset-ring-warning-500 inset-ring",
+        selected && "preset-tonal-primary inset-ring-primary-500 inset-ring-2",
         !reorderActions && "card-hover"
     ]}
     aria-labelledby={`${id}-name`}
     onclick={() => {
-        if (!reorderActions) launchDrawer();
+        if (selectable) {
+            onSelect?.(item.id);
+        } else if (!reorderActions) {
+            launchDrawer();
+        }
     }}
     onkeyup={(e) => {
-        if (!reorderActions && e.key === "Enter") launchDrawer();
+        if (selectable && (e.key === "Enter" || e.key === " ")) {
+            onSelect?.(item.id);
+        } else if (!reorderActions && e.key === "Enter") launchDrawer();
     }}
+    aria-pressed={selectable ? selected : undefined}
     role={reorderActions ? "none" : "button"}
 >
     <ItemCard

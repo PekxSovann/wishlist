@@ -35,6 +35,14 @@ export class ListAPI {
     updateItems = async (data: z.infer<typeof listItemsUpdateSchema>[]) => {
         return await this._makeRequest("PATCH", "/items", data);
     };
+
+    bulkDeleteItems = async (itemIds: string[]) => {
+        return await this._makeRequest("POST", "/items/bulk", { action: "delete", itemIds });
+    };
+
+    bulkMoveItems = async (itemIds: string[], targetListId: string) => {
+        return await this._makeRequest("POST", "/items/bulk", { action: "move", itemIds, targetListId });
+    };
 }
 
 export class ListItemAPI {

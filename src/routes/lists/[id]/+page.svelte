@@ -26,6 +26,7 @@
     import ListStatistics from "$lib/components/wishlists/ListStatistics.svelte";
     import type { ActionReturn } from "svelte/action";
     import { toaster } from "$lib/components/toaster";
+    import ConfirmModal from "$lib/components/modals/ConfirmModal.svelte";
 
     const { data }: PageProps = $props();
     const t = getFormatter();
@@ -33,9 +34,13 @@
     // svelte-ignore state_referenced_locally
     let allItems: ItemOnListDTO[] = $state(data.list.items);
     let reordering = $state(false);
+    let selectMode = $state(false);
+    let selectedItemIds = $state(new Set<string>());
+    let targetListId = $state("");
     let publicListUrl: URL | undefined = $state();
     let approvals = $derived(allItems.filter((item) => !item.approved));
     let items = $derived(allItems.filter((item) => item.approved));
+    let selectedItems = $derived(items.filter((item) => selectedItemIds.has(item.id)));
     let listName = $derived.by(() => {
         if (data.list.name) {
             return data.list.name;
@@ -85,6 +90,13 @@
 
     $effect(() => {
         allItems = data.list.items;
+    });
+
+    $effect(() => {
+        const validSelectedItemIds = [...selectedItemIds].filter((itemId) => items.some((item) => item.id === itemId));
+        if (validSelectedItemIds.length !== selectedItemIds.size) {
+            selectedItemIds = new Set(validSelectedItemIds);
+        }
     });
 
     const updateDisplayOrder = (items: ItemOnListDTO[]) => {
@@ -196,6 +208,78 @@
         }
 
         toaster.info({ description: $t("wishes.list-was-made-public") });
+        await invalidateAll();
+    };
+
+    const toggleSelectMode = () => {
+        selectMode = !selectMode;
+        reordering = false;
+        if (!selectMode) {
+            selectedItemIds = new Set();
+            targetListId = "";
+        }
+    };
+
+    const toggleItemSelection = (itemId: string) => {
+        const next = new Set(selectedItemIds);
+        if (next.has(itemId)) {
+            next.delete(itemId);
+        } else {
+            next.add(itemId);
+        }
+        selectedItemIds = next;
+    };
+
+    const setItemSelection = (itemId: string, selected: boolean) => {
+        const next = new Set(selectedItemIds);
+        if (selected) {
+            next.add(itemId);
+        } else {
+            next.delete(itemId);
+        }
+        selectedItemIds = next;
+    };
+
+    const selectAllItems = () => {
+        selectedItemIds = new Set(items.map((item) => item.id));
+    };
+
+    const clearSelection = () => {
+        selectedItemIds = new Set();
+    };
+
+    const bulkDeleteSelected = async () => {
+        const itemIds = [...selectedItemIds];
+        if (itemIds.length === 0) return;
+
+        const response = await listAPI.bulkDeleteItems(itemIds);
+        if (!response.ok) {
+            const description = await response.text();
+            toaster.error({ description });
+            return;
+        }
+
+        toaster.info({ description: $t("wishes.selected-items-deleted", { values: { count: itemIds.length } }) });
+        selectedItemIds = new Set();
+        selectMode = false;
+        await invalidateAll();
+    };
+
+    const bulkMoveSelected = async () => {
+        const itemIds = [...selectedItemIds];
+        if (itemIds.length === 0 || !targetListId) return;
+
+        const response = await listAPI.bulkMoveItems(itemIds, targetListId);
+        if (!response.ok) {
+            const description = await response.text();
+            toaster.error({ description });
+            return;
+        }
+
+        toaster.info({ description: $t("wishes.selected-items-moved", { values: { count: itemIds.length } }) });
+        selectedItemIds = new Set();
+        targetListId = "";
+        selectMode = false;
         await invalidateAll();
     };
 
@@ -315,8 +399,20 @@
             <ListViewModeChip {isTileView} />
         {/if}
         {#if data.list.owner.isMe || data.list.isManager}
-            <ReorderChip onFinalize={handleReorderFinalize} bind:reordering />
-            <ManageListChip onclick={() => goto(`${new URL(page.url).pathname}/manage`)} />
+            {#if data.list.owner.isMe}
+                <button
+                    class={["chip", selectMode ? "preset-tonal-secondary border-secondary-500 border" : "preset-filled-primary-500"]}
+                    onclick={toggleSelectMode}
+                    type="button"
+                >
+                    <iconify-icon icon="ion:checkbox"></iconify-icon>
+                    <span>{selectMode ? $t("general.cancel") : $t("wishes.select")}</span>
+                </button>
+            {/if}
+            {#if !selectMode}
+                <ReorderChip onFinalize={handleReorderFinalize} bind:reordering />
+                <ManageListChip onclick={() => goto(`${new URL(page.url).pathname}/manage`)} />
+            {/if}
         {/if}
         {#if data.canMakePrivate}
             <button class="preset-filled-primary-500 chip" onclick={makeListPrivate} type="button">
@@ -332,6 +428,51 @@
         {/if}
     </div>
 </div>
+
+{#if selectMode}
+    <div class="preset-tonal-surface inset-ring-surface-500 mb-4 flex flex-wrap items-center gap-2 rounded p-2 inset-ring print:hidden">
+        <span class="text-sm font-medium">
+            {$t("wishes.selected-items-count", { values: { count: selectedItemIds.size } })}
+        </span>
+        <button class="btn btn-sm preset-tonal" onclick={selectAllItems} type="button">
+            {$t("general.select-all")}
+        </button>
+        <button class="btn btn-sm preset-tonal" disabled={selectedItemIds.size === 0} onclick={clearSelection} type="button">
+            {$t("wishes.clear-selection")}
+        </button>
+        <select class="select w-full sm:w-56" bind:value={targetListId} aria-label={$t("wishes.move-to-list")}>
+            <option value="">{$t("wishes.move-to-list")}</option>
+            {#each data.availableLists as list (list.id)}
+                <option value={list.id}>{list.name || $t("wishes.my-wishes")}</option>
+            {/each}
+        </select>
+        <button
+            class="btn btn-sm preset-filled-primary-500"
+            disabled={selectedItemIds.size === 0 || !targetListId}
+            onclick={bulkMoveSelected}
+            type="button"
+        >
+            <iconify-icon icon="ion:arrow-forward"></iconify-icon>
+            <span>{$t("wishes.move-selected")}</span>
+        </button>
+        <ConfirmModal
+            description={$t("wishes.delete-selected-items-confirmation", { values: { count: selectedItemIds.size } })}
+            onConfirm={bulkDeleteSelected}
+        >
+            {#snippet trigger(triggerProps)}
+                <button
+                    {...triggerProps}
+                    class="btn btn-sm preset-tonal-error border-error-500 border"
+                    disabled={selectedItemIds.size === 0}
+                    type="button"
+                >
+                    <iconify-icon icon="ion:trash"></iconify-icon>
+                    <span>{$t("wishes.delete-selected")}</span>
+                </button>
+            {/snippet}
+        </ConfirmModal>
+    </div>
+{/if}
 
 <div class="flex flex-wrap-reverse items-start justify-between gap-2 pb-4 print:hidden">
     <ListStatistics {items} />
@@ -430,10 +571,24 @@
             {#each groupItems(items) as groupedItems}
                 {#each groupedItems as item (item.id)}
                     <div
+                        class="relative"
                         in:receive={{ key: item.id }}
                         out:send|local={{ key: item.id }}
                         animate:flip={{ duration: flipDurationMs }}
                     >
+                        {#if selectMode}
+                            <input
+                                class="checkbox preset-filled-primary-500 absolute top-3 right-3 z-10"
+                                aria-label={$t("wishes.select-item")}
+                                checked={selectedItemIds.has(item.id)}
+                                onchange={(event) => {
+                                    event.stopPropagation();
+                                    setItemSelection(item.id, event.currentTarget.checked);
+                                }}
+                                onclick={(event) => event.stopPropagation()}
+                                type="checkbox"
+                            />
+                        {/if}
                         <ItemCard
                             groupId={data.list.groupId}
                             {isTileView}
@@ -445,6 +600,9 @@
                             showNameAcrossGroups={data.showNameAcrossGroups}
                             user={data.loggedInUser}
                             userCanManage={data.list.isManager}
+                            selectable={selectMode}
+                            selected={selectedItemIds.has(item.id)}
+                            onSelect={toggleItemSelection}
                         />
                     </div>
                 {/each}

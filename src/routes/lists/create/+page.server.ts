@@ -79,7 +79,7 @@ export const actions: Actions = {
             icon: form.get("icon"),
             iconColor: form.get("iconColor"),
             public: form.get("public"),
-            isPrivate: form.get("isPrivate"),
+            isPrivate: form.get("isPrivate") === "true",
             description: form.get("description")
         });
         if (listProperties.error) {

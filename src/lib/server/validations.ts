@@ -98,7 +98,7 @@ export const getListPropertiesSchema = () => {
         icon: z.string().trim().nullable(),
         iconColor: z.string().trim().nullable(),
         public: z.coerce.boolean().default(false),
-        isPrivate: z.coerce.boolean().default(false),
+        isPrivate: z.boolean().default(false),
         description: z.string().max(10000).nullable(),
         managers: z.string().array().nullable().default([])
     });
@@ -112,6 +112,18 @@ export const listItemsUpdateSchema = z.object({
 export const listItemUpdateSchema = z.object({
     approved: z.boolean().nullish()
 });
+
+export const bulkListItemUpdateSchema = z.discriminatedUnion("action", [
+    z.object({
+        action: z.literal("delete"),
+        itemIds: z.string().array().min(1)
+    }),
+    z.object({
+        action: z.literal("move"),
+        itemIds: z.string().array().min(1),
+        targetListId: z.string()
+    })
+]);
 
 export const listItemClaimSchema = z.object({
     quantity: z.number(),
