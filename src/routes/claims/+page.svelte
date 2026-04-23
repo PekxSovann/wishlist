@@ -42,7 +42,7 @@
             return Object.entries(
                 visibleItems.reduce(
                     (accum, item) => {
-                        (accum[item.user.name] ??= []).push(item);
+                        (accum[item.user.username] ??= []).push(item);
                         return accum;
                     },
                     {} as Record<string, ItemOnListDTO[]>

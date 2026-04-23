@@ -43,6 +43,10 @@ export const GET: RequestHandler = async ({ url }) => {
     const userIdFilter = decodeMultiValueFilter(url.searchParams.get("users"));
     const offset = parsePositiveInteger(url.searchParams.get("offset"), 0);
     const take = parseOptionalPositiveInteger(url.searchParams.get("take"));
+    const privateOnly = url.searchParams.get("privateOnly") === "1";
+    if (privateOnly && user.roleId !== Role.ADMIN) {
+        error(403, "Not authorized");
+    }
 
     return new Response(
         JSON.stringify(
@@ -50,7 +54,8 @@ export const GET: RequestHandler = async ({ url }) => {
                 groupId: activeMembership.groupId,
                 userIdFilter,
                 offset,
-                take
+                take,
+                privateOnly
             })
         ),
         { status: 200 }

@@ -132,15 +132,15 @@
     <iconify-icon icon="ion:person"></iconify-icon>
     <span class="text-wrap" data-testid="added-by">
         {#if showFor}
-            {@html $t("wishes.for", { values: { name: item.user.name, class: "text-secondary-900-100 font-bold" } })}
+            {@html $t("wishes.for", { values: { name: item.user.username, class: "text-secondary-900-100 font-bold" } })}
         {:else if !onPublicList}
             {@html $t("wishes.added-by", {
-                values: { name: item.addedBy.name, class: "text-secondary-900-100 font-bold" }
+                values: { name: item.addedBy.username, class: "text-secondary-900-100 font-bold" }
             })}
         {:else}
             {@html item.addedBy.id === item.user.id
                 ? $t("wishes.added-by", {
-                      values: { name: item.addedBy.name, class: "text-secondary-900-100 font-bold" }
+                      values: { name: item.addedBy.username, class: "text-secondary-900-100 font-bold" }
                   })
                 : $t("wishes.added-by-somebody-else", { values: { class: "text-secondary-900-100 font-bold" } })}
         {/if}

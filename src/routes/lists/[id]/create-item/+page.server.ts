@@ -12,6 +12,7 @@ import { ItemEvent } from "$lib/events";
 import { getItemInclusions } from "$lib/server/items";
 import { requireLogin } from "$lib/server/auth";
 import { extractFormData, getItemCreateSchema } from "$lib/server/validations";
+import { Role } from "$lib/schema";
 import z from "zod";
 import type { List, Prisma } from "$lib/generated/prisma/client";
 
@@ -20,12 +21,15 @@ export const load: PageServerLoad = async ({ params }) => {
     const $t = await getFormatter();
 
     const activeMembership = await getActiveMembership(user);
-    const list = await getById(params.id);
+    const list: any = await getById(params.id);
     if (!list) {
         error(404, $t("errors.list-not-found"));
     }
     if (!list.public && list.groupId !== activeMembership.groupId) {
         error(404, $t("errors.user-not-in-group"));
+    }
+    if (list.isPrivate && list.owner.id !== user.id && user.roleId !== Role.ADMIN) {
+        error(401, $t("errors.not-authorized"));
     }
 
     const config = await getConfig(activeMembership.groupId);
@@ -33,7 +37,7 @@ export const load: PageServerLoad = async ({ params }) => {
     if (
         !config.suggestions.enable &&
         user.id !== list.owner.id &&
-        !list.managers.find(({ userId }) => userId === user.id)
+        !list.managers.find(({ userId }: any) => userId === user.id)
     ) {
         error(401, $t("errors.suggestions-are-disabled"));
     }
@@ -41,7 +45,7 @@ export const load: PageServerLoad = async ({ params }) => {
     const lists = await getAvailableLists(list.owner.id, user.id);
 
     const isOwnerOrManager =
-        list.owner.id === user.id || list.managers.find(({ userId }) => userId === user.id) !== undefined;
+        list.owner.id === user.id || list.managers.find(({ userId }: any) => userId === user.id) !== undefined;
     return {
         lists,
         list: {
@@ -63,12 +67,15 @@ export const actions: Actions = {
 
         const activeMembership = await getActiveMembership(user);
 
-        const list = await getById(params.id);
+        const list: any = await getById(params.id);
         if (!list) {
             return fail(404, { success: false, message: $t("errors.list-not-found") });
         }
         if (!list.public && list.groupId !== activeMembership.groupId) {
             return fail(404, { success: false, message: $t("errors.user-not-in-group") });
+        }
+        if (list.isPrivate && list.owner.id !== user.id && user.roleId !== Role.ADMIN) {
+            return fail(401, { success: false, message: $t("errors.not-authorized") });
         }
 
         const itemFormSchema = await getItemCreateSchema();

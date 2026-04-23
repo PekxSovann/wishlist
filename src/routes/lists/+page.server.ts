@@ -31,7 +31,7 @@ export const load = (async ({ url }) => {
             users: [
                 {
                     id: user.id,
-                    name: user.name,
+                    username: user.username,
                     picture: user.picture || null
                 }
             ]
@@ -54,6 +54,7 @@ export const load = (async ({ url }) => {
             name: true,
             icon: true,
             iconColor: true,
+            isPrivate: true,
             owner: {
                 select: {
                     id: true,
@@ -77,7 +78,8 @@ export const load = (async ({ url }) => {
                                     claimedCurrency: true,
                                     claimedBy: {
                                         select: {
-                                            name: true
+                                            name: true,
+                                            username: true
                                         }
                                     },
                                     publicClaimedBy: {
@@ -107,14 +109,15 @@ export const load = (async ({ url }) => {
                 }
             }
         }
-    });
+    } as any);
 
     const otherListsQuery = client.list.findMany({
         where: {
             ownerId: {
                 not: user.id
             },
-            groupId: activeMembership.groupId
+            groupId: activeMembership.groupId,
+            isPrivate: user.roleId === Role.ADMIN ? undefined : false
         },
         orderBy: [
             {
@@ -131,6 +134,7 @@ export const load = (async ({ url }) => {
             name: true,
             icon: true,
             iconColor: true,
+            isPrivate: true,
             owner: {
                 select: {
                     id: true,
@@ -157,7 +161,8 @@ export const load = (async ({ url }) => {
                                     claimedCurrency: true,
                                     claimedBy: {
                                         select: {
-                                            name: true
+                                            name: true,
+                                            username: true
                                         }
                                     },
                                     publicClaimedBy: {
@@ -172,36 +177,37 @@ export const load = (async ({ url }) => {
                 }
             }
         }
+    } as any);
+
+    const [myLists, otherLists] = (await Promise.all([userListsQuery, otherListsQuery])) as [any[], any[]];
+
+    const usersById = new Map<string, { id: string; username: string; picture: string | null }>();
+    usersById.set(user.id, {
+        id: user.id,
+        username: user.username,
+        picture: user.picture || null
     });
-
-    const [myLists, otherLists] = await Promise.all([userListsQuery, otherListsQuery]);
-
-    const users = [
-        {
-            id: user.id,
-            name: user.name,
-            picture: user.picture || null
-        },
-        ...new Set(
-            otherLists.map((list) => ({
-                id: list.owner.id,
-                name: list.owner.name,
-                picture: list.owner.picture || null
-            }))
-        )
-    ];
+    for (const list of otherLists) {
+        usersById.set(list.owner.id, {
+            id: list.owner.id,
+            username: list.owner.username,
+            picture: list.owner.picture || null
+        });
+    }
+    const users = [...usersById.values()];
 
     return {
         myLists: myLists
-            .filter((list) => effectiveUserIdFilter.length === 0 || effectiveUserIdFilter.includes(list.owner.id))
-            .map((list) => {
+            .filter((list: any) => effectiveUserIdFilter.length === 0 || effectiveUserIdFilter.includes(list.owner.id))
+            .map((list: any) => {
                 const owedByClaimants = Object.values(
                     list.items
-                        .flatMap(({ item }) => item.claims)
-                        .filter((claim) => claim.listId === list.id && claim.claimedPrice !== null && claim.claimedCurrency)
+                        .flatMap(({ item }: any) => item.claims)
+                        .filter((claim: any) => claim.listId === list.id && claim.claimedPrice !== null && claim.claimedCurrency)
                         .reduce(
-                            (acc, claim) => {
-                                const claimantName = claim.claimedBy?.name ?? claim.publicClaimedBy?.name ?? "Anonymous";
+                            (acc: any, claim: any) => {
+                                const claimantName =
+                                    claim.claimedBy?.username ?? claim.claimedBy?.name ?? claim.publicClaimedBy?.name ?? "Anonymous";
                                 const key = `${claimantName}::${claim.claimedCurrency}`;
                                 const amount = claim.claimedPrice! * claim.quantity;
                                 if (!acc[key]) {
@@ -212,12 +218,12 @@ export const load = (async ({ url }) => {
                             },
                             {} as Record<string, { name: string; currency: string; total: number }>
                         )
-                );
+                ) as { name: string; currency: string; total: number }[];
                 const totalCostByCurrency = Object.entries(
                     list.items
-                        .filter(({ item }) => item.itemPrice !== null)
+                        .filter(({ item }: any) => item.itemPrice !== null)
                         .reduce(
-                            (accum, { item }) => {
+                            (accum: any, { item }: any) => {
                                 accum[item.itemPrice!.currency] =
                                     (accum[item.itemPrice!.currency] ||= 0) + item.itemPrice!.value * (item.quantity || 1);
                                 return accum;
@@ -225,41 +231,43 @@ export const load = (async ({ url }) => {
                             {} as Record<string, number>
                         )
                 )
-                    .map(([currency, total]) => ({ currency, total }))
+                    .map(([currency, total]) => ({ currency, total: Number(total) }))
                     .toSorted((a, b) => b.total - a.total);
                 return {
                     id: list.id,
                     name: list.name,
                     icon: list.icon,
                     iconColor: list.iconColor,
+                    isPrivate: list.isPrivate,
                     owner: list.owner,
                     claimedCount: undefined,
-                    itemCount: list.items.reduce((accum, { item }) => accum + (item.quantity || 1), 0),
+                    itemCount: list.items.reduce((accum: any, { item }: any) => accum + (item.quantity || 1), 0),
                     unapprovedCount: list._count.items,
                     totalCostByCurrency,
                     owedByClaimants
                 };
             }),
         otherLists: otherLists
-            .filter((list) => effectiveUserIdFilter.length === 0 || effectiveUserIdFilter.includes(list.owner.id))
-            .map((list) => {
+            .filter((list: any) => effectiveUserIdFilter.length === 0 || effectiveUserIdFilter.includes(list.owner.id))
+            .map((list: any) => {
                 const claimedCount = list.items
-                    .filter((it) => it.approved)
-                    .filter(({ item }) => {
-                        const claimedCount = item.claims.map(({ quantity }) => quantity).reduce((a, b) => a + b, 0);
+                    .filter((it: any) => it.approved)
+                    .filter(({ item }: any) => {
+                        const claimedCount = item.claims.map(({ quantity }: any) => quantity).reduce((a: any, b: any) => a + b, 0);
                         return claimedCount === item.quantity;
                     }).length;
                 const itemCount = list.items
-                    .filter((it) => it.approved)
-                    .reduce((accum, { item }) => accum + (item.quantity || 1), 0);
-                const items = list.items.map((it) => ({ id: it.item.id }));
+                    .filter((it: any) => it.approved)
+                    .reduce((accum: any, { item }: any) => accum + (item.quantity || 1), 0);
+                const items = list.items.map((it: any) => ({ id: it.item.id }));
                 const owedByClaimants = Object.values(
                     list.items
-                        .flatMap(({ item }) => item.claims)
-                        .filter((claim) => claim.listId === list.id && claim.claimedPrice !== null && claim.claimedCurrency)
+                        .flatMap(({ item }: any) => item.claims)
+                        .filter((claim: any) => claim.listId === list.id && claim.claimedPrice !== null && claim.claimedCurrency)
                         .reduce(
-                            (acc, claim) => {
-                                const claimantName = claim.claimedBy?.name ?? claim.publicClaimedBy?.name ?? "Anonymous";
+                            (acc: any, claim: any) => {
+                                const claimantName =
+                                    claim.claimedBy?.username ?? claim.claimedBy?.name ?? claim.publicClaimedBy?.name ?? "Anonymous";
                                 const key = `${claimantName}::${claim.claimedCurrency}`;
                                 const amount = claim.claimedPrice! * claim.quantity;
                                 if (!acc[key]) {
@@ -270,12 +278,12 @@ export const load = (async ({ url }) => {
                             },
                             {} as Record<string, { name: string; currency: string; total: number }>
                         )
-                );
+                ) as { name: string; currency: string; total: number }[];
                 const totalCostByCurrency = Object.entries(
                     list.items
-                        .filter((it) => it.approved && it.item.itemPrice !== null)
+                        .filter((it: any) => it.approved && it.item.itemPrice !== null)
                         .reduce(
-                            (accum, { item }) => {
+                            (accum: any, { item }: any) => {
                                 accum[item.itemPrice!.currency] =
                                     (accum[item.itemPrice!.currency] ||= 0) + item.itemPrice!.value * (item.quantity || 1);
                                 return accum;
@@ -283,13 +291,14 @@ export const load = (async ({ url }) => {
                             {} as Record<string, number>
                         )
                 )
-                    .map(([currency, total]) => ({ currency, total }))
+                    .map(([currency, total]) => ({ currency, total: Number(total) }))
                     .toSorted((a, b) => b.total - a.total);
                 return {
                     id: list.id,
                     name: list.name,
                     icon: list.icon,
                     iconColor: list.iconColor,
+                    isPrivate: list.isPrivate,
                     owner: list.owner,
                     claimedCount,
                     itemCount,
@@ -298,6 +307,7 @@ export const load = (async ({ url }) => {
                     owedByClaimants
                 };
             }),
-        users
+        users,
+        canCreatePrivate: [Role.BUYER, Role.ADMIN].includes(user.roleId)
     };
 }) satisfies PageServerLoad;

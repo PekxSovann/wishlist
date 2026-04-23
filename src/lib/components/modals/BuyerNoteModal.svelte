@@ -32,13 +32,13 @@
         saving = false;
 
         if (!resp.ok) {
-            toaster.error({ description: t("general.oops") });
+            toaster.error({ description: $t("general.oops") });
             return;
         }
 
         onSaved?.(payload);
         open = false;
-        toaster.info({ description: t("general.save") });
+        toaster.info({ description: $t("general.save") });
     }
 </script>
 

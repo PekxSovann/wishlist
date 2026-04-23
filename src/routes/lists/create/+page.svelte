@@ -18,5 +18,5 @@
 <ManageListForm {...data} persistButtonName={$t("general.create")} />
 
 <svelte:head>
-    <title>{$t("wishes.create-list")}</title>
+    <title>{data.list.isPrivate ? $t("wishes.create-private-list") : $t("wishes.create-list")}</title>
 </svelte:head>

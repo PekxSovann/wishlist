@@ -7,22 +7,33 @@ import { getFormatter } from "$lib/server/i18n";
 import { getById } from "$lib/server/list";
 import { getActiveMembership } from "$lib/server/group-membership";
 import { ItemCreateHandler, ItemDeleteHandler, ItemsUpdateHandler, ItemUpdateHandler } from "$lib/events";
+import { Role } from "$lib/schema";
 
 export const GET = (async ({ locals, params }) => {
     const $t = await getFormatter();
 
-    const list = await getById(params.id);
+    const list: any = await getById(params.id);
     const config = await getConfig(list?.groupId);
     if (!locals.user) {
         // Unauthenticated users can only view public lists
-        if (!list || !list.public) {
+        if (!list || !list.public || list.isPrivate) {
             // Redirect to login so we don't expose details if the list does exist
             return new Response();
         }
     } else {
         // Logged in users must be in the correct group, or viewing a public list
         const activeMembership = await getActiveMembership(locals.user);
-        if (!list || (!list.public && list.groupId !== activeMembership.groupId)) {
+        if (!list) {
+            error(404, $t("errors.list-not-found"));
+        }
+        if (list.isPrivate) {
+            if (list.groupId !== activeMembership.groupId) {
+                error(404, $t("errors.list-not-found"));
+            }
+            if (list.owner.id !== locals.user.id && locals.user.roleId !== Role.ADMIN) {
+                error(404, $t("errors.list-not-found"));
+            }
+        } else if (!list.public && list.groupId !== activeMembership.groupId) {
             error(404, $t("errors.list-not-found"));
         }
     }
@@ -32,7 +43,7 @@ export const GET = (async ({ locals, params }) => {
         config.suggestions.enable &&
         config.suggestions.method === "surprise" &&
         locals.user &&
-        (list.owner.id === locals.user.id || list.managers.find(({ userId }) => userId === locals.user!.id))
+        (list.owner.id === locals.user.id || list.managers.find(({ userId }: any) => userId === locals.user!.id))
     ) {
         return new Response();
     }

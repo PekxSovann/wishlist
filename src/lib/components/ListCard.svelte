@@ -5,6 +5,7 @@
     import { formatNumberAsPrice, formatPlainNumber } from "$lib/price-formatter";
 
     interface ListWithCounts extends Partial<Pick<List, "id" | "name" | "icon" | "iconColor">> {
+        isPrivate?: boolean;
         owner: Pick<User, "name" | "username" | "picture">;
         itemCount?: number;
         claimedCount?: number;
@@ -23,7 +24,7 @@
     const { hideCount = false, hasNewItems = false, list, preventNavigate = false }: Props = $props();
     const t = getFormatter();
 
-    let listName = $derived(list.name || $t("wishes.wishes-for", { values: { listOwner: list.owner.name } }));
+    let listName = $derived(list.name || $t("wishes.wishes-for", { values: { listOwner: list.owner.username } }));
     let iconColor = $derived(list.iconColor);
     let elementTag = $derived(preventNavigate ? "div" : "a");
     let element: HTMLElement | undefined = $state();
@@ -66,6 +67,9 @@
             <span class="text-primary-900-100 line-clamp-2 text-2xl font-bold md:text-4xl" data-testid="list-name">
                 {listName}
             </span>
+            {#if list.isPrivate}
+                <span class="badge preset-tonal-primary w-fit">{$t("wishes.private")}</span>
+            {/if}
             {#if list.totalCostByCurrency && list.totalCostByCurrency.length > 0}
                 <div class="flex flex-col gap-0.5">
                     {#each list.totalCostByCurrency as total}
@@ -76,7 +80,7 @@
             <div class="flex flex-row flex-wrap items-center gap-2 text-lg">
                 <div class="flex flex-row items-center gap-2">
                     <Avatar class="text-tiny size-6" user={list.owner} />
-                    <span class="text-surface-800-200" data-testid="list-owner">{list.owner.name}</span>
+                    <span class="text-surface-800-200" data-testid="list-owner">{list.owner.username}</span>
                 </div>
 
                 {#if list.itemCount !== undefined}

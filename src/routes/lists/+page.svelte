@@ -14,7 +14,7 @@
     let { data }: PageProps = $props();
 
     const t = getFormatter();
-    const users = $state(data.users);
+    const users = $state(data.users as any);
 
     const hasNewItems = async (list: ListData) => {
         if (!list.items || list.items.length === 0) return false;
@@ -27,13 +27,24 @@
 
 <div class="flex flex-wrap-reverse items-start justify-between gap-2 pb-4 print:hidden">
     <ListFilterChip {users} />
-    <button
-        class="preset-tonal-secondary inset-ring-secondary-500 btn btn-xs h-fit items-center inset-ring"
-        onclick={() => goto(resolve("/lists/create"))}
-    >
-        <iconify-icon icon="ion:add"></iconify-icon>
-        <span>{$t("wishes.create-list")}</span>
-    </button>
+    <div class="flex flex-wrap gap-2">
+        <button
+            class="preset-tonal-secondary inset-ring-secondary-500 btn btn-xs h-fit items-center inset-ring"
+            onclick={() => goto(resolve("/lists/create"))}
+        >
+            <iconify-icon icon="ion:add"></iconify-icon>
+            <span>{$t("wishes.create-list")}</span>
+        </button>
+        {#if data.canCreatePrivate}
+            <button
+                class="preset-tonal-secondary inset-ring-secondary-500 btn btn-xs h-fit items-center inset-ring"
+                onclick={() => goto(resolve("/lists/create?private=1"))}
+            >
+                <iconify-icon icon="ion:lock-closed"></iconify-icon>
+                <span>{$t("wishes.create-private-list")}</span>
+            </button>
+        {/if}
+    </div>
 </div>
 
 {#if data.myLists.length + data.otherLists.length === 0}

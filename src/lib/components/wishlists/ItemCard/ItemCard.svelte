@@ -1,5 +1,5 @@
 <script lang="ts" module>
-    export interface PartialUser extends Pick<User, "id" | "name"> {
+    export interface PartialUser extends Pick<User, "id" | "name" | "username"> {
         activeGroupId: string;
     }
 

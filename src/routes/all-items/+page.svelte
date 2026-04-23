@@ -40,7 +40,7 @@
 
     initListViewPreference(data.initialViewPreference);
     let isTileView = $derived(getListViewPreference() === "tile");
-    let users = $derived(items.map((item) => item.user));
+    let users = $derived(data.filterUsers);
     let groupBy = $state<"all" | "left-to-buy">("left-to-buy");
     let visibleItems = $derived(groupBy === "left-to-buy" ? items.filter((item) => item.remainingQuantity > 0) : items);
     let selectMultiple = $state(false);
@@ -251,7 +251,7 @@
                                     </Image>
                                     <div class="flex flex-col">
                                         <span class="font-semibold">{item.name}</span>
-                                        <span class="subtext">{item.user.name}</span>
+                                        <span class="subtext">{item.user.username}</span>
                                         {#if item.itemPrice || item.price}
                                             <span class="subtext">Desired: {formatPrice(item)}</span>
                                         {/if}

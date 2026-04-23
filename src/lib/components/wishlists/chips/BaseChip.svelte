@@ -156,10 +156,13 @@
         {#snippet content(props)}
             <div
                 {...props}
-                class={["card preset-filled-surface-100-900 list-nav z-10 max-h-96 p-4 shadow-xl", props?.class]}
+                class={[
+                    "card preset-filled-surface-100-900 list-nav z-10 flex max-h-[min(24rem,calc(100vh-8rem))] w-max max-w-[calc(100vw-2rem)] flex-col overflow-hidden p-4 shadow-xl",
+                    props?.class
+                ]}
             >
-                <nav>
-                    <ul class="max-h-72 overflow-auto">
+                <nav class="flex min-h-0 flex-1 flex-col">
+                    <ul class="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 touch-pan-y">
                         {#each options as option (option.value + option.direction)}
                             <li>
                                 {#if multiselect}

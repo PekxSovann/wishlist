@@ -61,7 +61,17 @@ export class ItemsAPI {
         return await this._makeRequest("PATCH", "", items);
     };
 
-    getAllItemsPage = async ({ offset, take, users }: { offset: number; take?: number; users?: string | null }) => {
+    getAllItemsPage = async ({
+        offset,
+        take,
+        users,
+        privateOnly
+    }: {
+        offset: number;
+        take?: number;
+        users?: string | null;
+        privateOnly?: boolean;
+    }) => {
         const searchParams = new URLSearchParams({
             scope: "all-items",
             offset: `${offset}`
@@ -69,6 +79,7 @@ export class ItemsAPI {
 
         if (take) searchParams.append("take", `${take}`);
         if (users) searchParams.append("users", users);
+        if (privateOnly) searchParams.append("privateOnly", "1");
 
         return await this._makeRequest("GET", `?${searchParams.toString()}`);
     };

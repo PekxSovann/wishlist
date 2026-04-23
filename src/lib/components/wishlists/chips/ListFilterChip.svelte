@@ -4,18 +4,16 @@
     import { defaultLang, getFormatter, getLocale } from "$lib/i18n";
     import type { ClassValue } from "svelte/elements";
 
-    type PartialUser = Pick<User, "id" | "name">;
+    type PartialUser = Pick<User, "id"> & Partial<Pick<User, "name" | "username">>;
 
     interface Props {
         users: PartialUser[];
         class?: ClassValue;
     }
 
-    const props: Props = $props();
+    let { users, class: clazz }: Props = $props();
     const t = getFormatter();
     const locale = getLocale();
-
-    const users = $state(props.users);
 
     const label = $t("wishes.filter");
     const prefix = "ion:people";
@@ -24,7 +22,7 @@
         value: "",
         displayValue: $t("general.all")
     };
-    const options: Option[] = [defaultOption, ...getUniqueUsers(users)];
+    let options: Option[] = $derived([defaultOption, ...getUniqueUsers(users)]);
 
     function getUniqueUsers(users: PartialUser[]) {
         const uniqueIds = new Set();
@@ -34,13 +32,13 @@
                 if (unique) uniqueIds.add(u.id);
                 return unique;
             })
-            .map((user) => ({ value: user.id, displayValue: user.name }) as Option)
+            .map((user) => ({ value: user.id, displayValue: user.username ?? user.name ?? user.id }) as Option)
             .toSorted((a, b) => a.displayValue.localeCompare(b.displayValue, locale || defaultLang.code));
     }
 </script>
 
 <BaseChip
-    class={props.class}
+    class={clazz}
     {defaultOption}
     {label}
     multiselect

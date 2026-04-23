@@ -89,7 +89,7 @@
         if (data.user.roleId === Role.USER) {
             return navItems.filter((item) => item.labelKey === "wishes.my-lists" || item.labelKey === "app.my-payments");
         }
-        return navItems;
+        return navItems.filter((item) => !item.roles || item.roles.includes(data.user!.roleId));
     });
 </script>
 

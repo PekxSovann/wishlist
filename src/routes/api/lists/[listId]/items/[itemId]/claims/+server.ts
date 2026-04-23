@@ -8,6 +8,7 @@ import type { Prisma } from "$lib/generated/prisma/client";
 import { getItemInclusions } from "$lib/server/items";
 import { ItemEvent } from "$lib/events";
 import { logger } from "$lib/server/logger";
+import { Role } from "$lib/schema";
 import z from "zod";
 
 // Claim an item on a list
@@ -24,18 +25,25 @@ export const PUT: RequestHandler = async ({ locals, request, params }) => {
         error(400, $t("errors.claimed-by-user-must-be-specified"));
     }
 
-    const list = await client.list.findUnique({
+    const list: any = await client.list.findUnique({
         select: {
             id: true,
-            public: true
+            public: true,
+            isPrivate: true,
+            ownerId: true
         },
         where: {
             id: params.listId
         }
-    });
+    } as any);
 
     if (!list) {
         error(404, $t("errors.list-not-found"));
+    }
+    if (list.isPrivate) {
+        if (!locals.user || (locals.user.id !== list.ownerId && locals.user.roleId !== Role.ADMIN)) {
+            error(404, $t("errors.list-not-found"));
+        }
     }
 
     if (updateData.data.claimedById !== undefined && updateData.data.claimedById !== null) {

@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ params }) => {
     const activeMembership = await getActiveMembership(user);
 
     const config = await getConfig(activeMembership.groupId);
-    const list = await client.list
+    const list: any = await client.list
         .findUnique({
             where: {
                 id: params.id
@@ -29,6 +29,7 @@ export const load: PageServerLoad = async ({ params }) => {
                 icon: true,
                 iconColor: true,
                 public: true,
+                isPrivate: true,
                 owner: {
                     select: {
                         id: true,
@@ -51,11 +52,11 @@ export const load: PageServerLoad = async ({ params }) => {
                 groupId: true,
                 description: true
             }
-        })
+        } as any)
         .then((list) => list ?? error(404, $t("errors.list-not-found")));
 
     // Logged in users must be in the correct group, or viewing a public list
-    if (list.owner.id !== user.id && !list.managers.find(({ user: manager }) => manager.id === user.id)) {
+    if (list.owner.id !== user.id && !list.managers.find(({ user: manager }: any) => manager.id === user.id)) {
         error(401, $t("errors.not-authorized"));
     }
     if (list.groupId !== activeMembership.groupId) {
@@ -65,7 +66,7 @@ export const load: PageServerLoad = async ({ params }) => {
     return {
         list: {
             ...list,
-            managers: list.managers.map(({ user }) => ({ ...user }))
+            managers: list.managers.map(({ user }: any) => ({ ...user }))
         },
         listMode: config.listMode,
         allowsPublicLists: config.allowPublicLists,

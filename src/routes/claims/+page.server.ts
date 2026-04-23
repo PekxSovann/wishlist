@@ -49,7 +49,8 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
                     addedBy: {
                         select: {
                             id: true,
-                            name: true
+                            name: true,
+                            username: true
                         }
                     }
                 },
@@ -72,6 +73,7 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
                         select: {
                             id: true,
                             name: true,
+                            username: true,
                             UserGroupMembership: {
                                 select: {
                                     groupId: true
@@ -101,7 +103,8 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
                     user: {
                         select: {
                             id: true,
-                            name: true
+                            name: true,
+                            username: true
                         }
                     }
                 }
@@ -109,7 +112,8 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
             user: {
                 select: {
                     id: true,
-                    name: true
+                    name: true,
+                    username: true
                 }
             },
             itemPrice: true,

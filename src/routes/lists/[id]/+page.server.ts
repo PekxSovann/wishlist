@@ -5,16 +5,17 @@ import { getFormatter } from "$lib/server/i18n";
 import { getById, getItems, type GetItemsOptions } from "$lib/server/list";
 import { getActiveMembership } from "$lib/server/group-membership";
 import type { UserGroupMembership } from "$lib/generated/prisma/client";
+import { Role } from "$lib/schema";
 
 export const load = (async ({ params, url, locals, depends, cookies }) => {
     const $t = await getFormatter();
 
-    const list = await getById(params.id);
+    const list: any = await getById(params.id);
 
     let activeMembership: UserGroupMembership | undefined;
     if (!locals.user) {
-        // Unauthenticated users can only view public lists
-        if (!list || !list.public) {
+        // Unauthenticated users can only view non-private public lists
+        if (!list || !list.public || list.isPrivate) {
             // Redirect to login so we don't expose details if the list does exist
             const redirectTo = url.pathname + url.search;
             const params = new URLSearchParams({ redirectTo });
@@ -23,7 +24,17 @@ export const load = (async ({ params, url, locals, depends, cookies }) => {
     } else {
         // Logged in users must be in the correct group, or viewing a public list
         activeMembership = await getActiveMembership(locals.user);
-        if (!list || (!list.public && list.groupId !== activeMembership.groupId)) {
+        if (!list) {
+            error(404, $t("errors.list-not-found"));
+        }
+        if (list.isPrivate) {
+            if (list.groupId !== activeMembership.groupId) {
+                error(401, $t("errors.user-must-be-in-the-correct-group"));
+            }
+            if (list.owner.id !== locals.user.id && locals.user.roleId !== Role.ADMIN) {
+                error(404, $t("errors.list-not-found"));
+            }
+        } else if (!list.public && list.groupId !== activeMembership.groupId) {
             error(404, $t("errors.list-not-found"));
         }
         // Owners of the public list need to be in the correct group still
@@ -40,7 +51,7 @@ export const load = (async ({ params, url, locals, depends, cookies }) => {
         sortDir: url.searchParams.get("dir"),
         suggestionMethod: config.suggestions.method,
         listOwnerId: list.owner.id,
-        listManagers: new Set(list.managers.map(({ userId }) => userId)),
+        listManagers: new Set(list.managers.map(({ userId }: any) => userId)),
         loggedInUserId: locals.user?.id || null
     };
 
@@ -59,7 +70,7 @@ export const load = (async ({ params, url, locals, depends, cookies }) => {
                 isMe: list.owner.id === locals.user?.id,
                 activeGroupId: list.groupId
             },
-            isManager: list.managers.find(({ userId }) => userId === locals.user?.id) !== undefined,
+            isManager: list.managers.find(({ userId }: any) => userId === locals.user?.id) !== undefined,
             items
         },
         loggedInUser: locals.user

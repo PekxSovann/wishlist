@@ -33,7 +33,7 @@
                 item.claims
                     .filter((claim) => claim.listId === item.listId && claim.claimedPrice)
                     .map((claim) => ({
-                        name: claim.claimedBy?.name ?? claim.publicClaimedBy?.name ?? "Anonymous",
+                        name: claim.claimedBy?.username ?? claim.claimedBy?.name ?? claim.publicClaimedBy?.name ?? "Anonymous",
                         currency: claim.claimedPrice!.currency,
                         amount: claim.claimedPrice!.value * claim.quantity
                     }))

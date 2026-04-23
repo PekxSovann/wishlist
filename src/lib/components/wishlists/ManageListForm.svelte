@@ -12,6 +12,7 @@
     import SelectListManagerModal from "../modals/SelectListManagerModal.svelte";
 
     interface ListProps extends Partial<Pick<List, "id" | "icon" | "iconColor" | "name" | "public" | "description">> {
+        isPrivate?: boolean;
         owner: Pick<User, "id" | "name" | "username" | "picture">;
         managers: Pick<User, "id" | "name" | "username">[];
     }
@@ -56,6 +57,7 @@
         }
     }}
 >
+    <input type="hidden" name="isPrivate" value={list.isPrivate ? "true" : "false"} />
     <div class="grid grid-cols-12 gap-4 pb-4">
         <div class="col-span-full flex w-full flex-row flex-wrap gap-4">
             <label class="label w-fit grow" for="name">
@@ -80,8 +82,8 @@
                         id="public"
                         name="public"
                         class="checkbox"
-                        checked={list.public || listMode === "registry"}
-                        disabled={listMode === "registry"}
+                        checked={(list.public || listMode === "registry") && !Boolean(list.isPrivate)}
+                        disabled={listMode === "registry" || Boolean(list.isPrivate)}
                         type="checkbox"
                     />
                     <span>{$t("wishes.public")}</span>

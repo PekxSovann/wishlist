@@ -5,6 +5,7 @@ import { toItemOnListDTO } from "../dtos/item-mapper";
 import { getItemInclusions } from "./items";
 import type { Prisma } from "$lib/generated/prisma/client";
 import { getConfig } from "./config";
+import { Role } from "$lib/schema";
 
 export interface GetItemsOptions {
     filter: string | null;
@@ -21,7 +22,23 @@ export interface ListProperties {
     icon?: string | null;
     iconColor?: string | null;
     public?: boolean;
+    isPrivate?: boolean;
 }
+
+type AvailableList = {
+    id: string;
+    name: string | null;
+    public: boolean;
+    isPrivate?: boolean;
+    groupId: string;
+    owner: {
+        name: string;
+    };
+    group: {
+        id: string;
+        name: string;
+    };
+};
 
 export const create = async (ownerId: string, groupId: string, otherData?: ListProperties) => {
     const cuid2 = init({ length: 10 });
@@ -142,12 +159,13 @@ export const getById = async (id: string) => {
             },
             groupId: true,
             public: true,
+            isPrivate: true,
             description: true
         },
         where: {
             id
         }
-    });
+    } as any);
 };
 
 export const getItems = async (listId: string, options: GetItemsOptions) => {
@@ -222,10 +240,11 @@ export const getItems = async (listId: string, options: GetItemsOptions) => {
     return itemDTOs;
 };
 
-const availableListSelection: Prisma.ListFindManyArgs["select"] = {
+const availableListSelection = {
     id: true,
     name: true,
     public: true,
+    isPrivate: true,
     owner: {
         select: {
             name: true
@@ -237,21 +256,21 @@ const availableListSelection: Prisma.ListFindManyArgs["select"] = {
             name: true
         }
     }
-};
+} as any;
 
 /**
  * Returns all lists that are owned by ownerId that can be accessed by loggedInUserId.
  * Accessed in this context means the logged in user is either in the same group as the list
  * or the list is public. In both scenarios, suggestions must be enabled for the group
  */
-export const getAvailableLists = async (ownerId: string, loggedInUserId: string) => {
+export const getAvailableLists = async (ownerId: string, loggedInUserId: string): Promise<AvailableList[]> => {
     if (ownerId === loggedInUserId) {
-        return await client.list.findMany({
+        return (await client.list.findMany({
             select: availableListSelection,
             where: {
                 ownerId
             }
-        });
+        } as any)) as unknown as AvailableList[];
     }
 
     const overlappingGroups = await Promise.all([
@@ -277,30 +296,42 @@ export const getAvailableLists = async (ownerId: string, loggedInUserId: string)
         return ownersGroupIds.intersection(loggedInUserGroupIds);
     });
 
-    const ownersListsInCommonGroups = await client.list.findMany({
+    const loggedInUser = await client.user.findUnique({
+        select: {
+            roleId: true
+        },
+        where: {
+            id: loggedInUserId
+        }
+    });
+    const isAdmin = loggedInUser?.roleId === Role.ADMIN;
+
+    const ownersListsInCommonGroups = (await client.list.findMany({
         select: availableListSelection,
         where: {
             ownerId,
             groupId: {
                 in: [...overlappingGroups]
-            }
+            },
+            isPrivate: isAdmin ? undefined : false
         }
-    });
+    } as any)) as unknown as AvailableList[];
 
-    const ownersPublicLists = await client.list.findMany({
+    const ownersPublicLists = (await client.list.findMany({
         select: availableListSelection,
         where: {
             ownerId,
             public: true,
+            isPrivate: false,
             id: {
                 notIn: ownersListsInCommonGroups.map(({ id }) => id)
             }
         }
-    });
+    } as any)) as unknown as AvailableList[];
 
     const listsAvailable = [];
     for (const list of [...ownersListsInCommonGroups, ...ownersPublicLists]) {
-        const groupConfig = await getConfig(list.group.id);
+        const groupConfig = await getConfig(list.groupId);
         if (groupConfig.suggestions.enable) {
             listsAvailable.push(list);
         }

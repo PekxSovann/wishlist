@@ -1,4 +1,5 @@
 import { resolve } from "$app/paths";
+import { Role } from "$lib/schema";
 
 export const navItems = [
     {
@@ -15,6 +16,12 @@ export const navItems = [
         labelKey: "app.all-items",
         href: () => resolve("/all-items"),
         icon: "ion:grid"
+    },
+    {
+        labelKey: "app.private-catalog",
+        href: () => resolve("/admin/private-catalog"),
+        icon: "ion:lock-closed",
+        roles: [Role.ADMIN]
     },
     {
         labelKey: "app.my-claims",

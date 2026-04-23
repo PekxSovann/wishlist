@@ -10,7 +10,7 @@ import type {
     UserGroupMembership
 } from "$lib/generated/prisma/client";
 
-type MinimalUser = Pick<User, "id" | "name">;
+type MinimalUser = Pick<User, "id" | "name" | "username">;
 
 interface UserWithGroups extends MinimalUser {
     UserGroupMembership: Pick<UserGroupMembership, "groupId">[];
@@ -58,7 +58,7 @@ export const toItemOnListDTO = (item: FullItem, listId: string) => {
         buyerNotes: item.buyerNotes.map((buyerNote) => ({
             id: buyerNote.id,
             userId: buyerNote.userId,
-            userName: buyerNote.user.name,
+            userName: buyerNote.user.username,
             note: buyerNote.note
         })),
         claims: claims.map((claim) => {

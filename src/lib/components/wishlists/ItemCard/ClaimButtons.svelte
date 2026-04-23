@@ -64,8 +64,8 @@
         if (note) {
             if (existing) {
                 existing.note = note;
-            } else if (user?.id && user.name) {
-                item.buyerNotes.push({ id: crypto.randomUUID(), userId: user.id, userName: user.name, note });
+            } else if (user?.id && user.username) {
+                item.buyerNotes.push({ id: crypto.randomUUID(), userId: user.id, userName: user.username, note });
             }
         } else if (existing) {
             item.buyerNotes = item.buyerNotes.filter((buyerNote) => buyerNote.userId !== user?.id);

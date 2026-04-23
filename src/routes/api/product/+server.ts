@@ -10,6 +10,7 @@ import { getFormatter } from "$lib/server/i18n";
 import { requireLoginOrError } from "$lib/server/auth";
 import { logger } from "$lib/server/logger";
 import { env } from "$env/dynamic/private";
+import type { Browser } from "playwright";
 
 const scraper = metascraper([shopping(), metascraperTitle(), metascraperImage()]);
 type ProductDiagnostic = {
@@ -72,7 +73,7 @@ const goShopping = async (targetUrl: URL, locales: string[]) => {
 };
 
 const goShoppingWithPlaywright = async (targetUrl: URL, locales: string[]) => {
-    let browser: { close: () => Promise<void> } | undefined;
+    let browser: Browser | undefined;
     try {
         let chromium: any;
         try {
@@ -97,6 +98,8 @@ const goShoppingWithPlaywright = async (targetUrl: URL, locales: string[]) => {
                 args: ["--no-sandbox", "--disable-setuid-sandbox"]
             });
         }
+
+        if (!browser) throw new Error("Playwright browser not available");
 
         const context = await browser.newContext({
             locale: locales[0] || "ja-JP",

@@ -5,7 +5,7 @@ import type { PartialUser } from "./ItemCard/ItemCard.svelte";
 
 export const getClaimedName = ({ claimedBy, publicClaimedBy }: ClaimDTO) => {
     if (claimedBy) {
-        return claimedBy.name;
+        return claimedBy.username || claimedBy.name;
     }
     if (publicClaimedBy?.name && publicClaimedBy.name !== "ANONYMOUS_NAME") {
         return publicClaimedBy.name;

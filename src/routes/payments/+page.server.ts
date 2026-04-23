@@ -33,7 +33,8 @@ export const load: PageServerLoad = async () => {
                     },
                     user: {
                         select: {
-                            name: true
+                            name: true,
+                            username: true
                         }
                     }
                 }
@@ -61,7 +62,8 @@ export const load: PageServerLoad = async () => {
             receivedAmount: true,
             claimedBy: {
                 select: {
-                    name: true
+                    name: true,
+                    username: true
                 }
             },
             publicClaimedBy: {
@@ -94,7 +96,7 @@ export const load: PageServerLoad = async () => {
             return {
                 claimId: claim.id,
                 itemName: claim.item.name,
-                owesYouName: claim.item.user.name,
+                owesYouName: claim.item.user.username,
                 quantity: claim.quantity,
                 currency,
                 unitAmount,
@@ -114,7 +116,7 @@ export const load: PageServerLoad = async () => {
             const totalOwed = unitAmount * claim.quantity;
             const amountPaid = claim.receivedAmount;
             const status = amountPaid <= 0 ? "unpaid" : amountPaid >= totalOwed ? "paid" : "partial";
-            const payableToName = claim.claimedBy?.name ?? claim.publicClaimedBy?.name ?? "Anonymous";
+            const payableToName = claim.claimedBy?.username ?? claim.claimedBy?.name ?? claim.publicClaimedBy?.name ?? "Anonymous";
             return {
                 claimId: claim.id,
                 itemName: claim.item.name,

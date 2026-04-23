@@ -3,6 +3,7 @@ import { unlink } from "fs/promises";
 import { logger } from "$lib/server/logger";
 import { getRequestEvent } from "$app/server";
 import { Readable } from "stream";
+import type { ReadableStream as NodeReadableStream } from "stream/web";
 import { finished } from "stream/promises";
 import { error } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
@@ -27,7 +28,7 @@ const fetchImage = async (imageUrl: string) => {
         const url = new URL(imageUrl);
         const resp = await getRequestEvent().fetch(url);
         if (resp.ok && resp.body) {
-            return Readable.fromWeb(resp.body as unknown as ReadableStream<any>);
+            return Readable.fromWeb(resp.body as unknown as NodeReadableStream);
         } else {
             return null;
         }
@@ -60,7 +61,7 @@ export const createImage = async (filename: string, image: File | string | null 
             return null;
         }
     } else if (isValidImage(image)) {
-        dataStream = Readable.fromWeb(image.stream() as unknown as ReadableStream<any>);
+        dataStream = Readable.fromWeb(image.stream() as unknown as NodeReadableStream);
     } else {
         return null;
     }

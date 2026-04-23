@@ -9,10 +9,12 @@ import { create } from "$lib/server/list";
 import { client } from "$lib/server/prisma";
 import { requireLogin } from "$lib/server/auth";
 import { logger } from "$lib/server/logger";
+import { Role } from "$lib/schema";
 import z from "zod";
 
-export const load = (async () => {
+export const load = (async ({ url }) => {
     const user = requireLogin();
+    const isPrivate = url.searchParams.get("private") === "1";
 
     const activeMembership = await getActiveMembership(user);
     const config = await getConfig(activeMembership.groupId);
@@ -39,7 +41,8 @@ export const load = (async () => {
                 picture: user.picture || null
             },
             description: null,
-            managers: []
+            managers: [],
+            isPrivate
         },
         listMode: config.listMode,
         allowsPublicLists: config.allowPublicLists,
@@ -76,12 +79,19 @@ export const actions: Actions = {
             icon: form.get("icon"),
             iconColor: form.get("iconColor"),
             public: form.get("public"),
+            isPrivate: form.get("isPrivate"),
             description: form.get("description")
         });
         if (listProperties.error) {
             return fail(422, {
                 success: false,
                 formErrors: z.flattenError(listProperties.error).fieldErrors
+            });
+        }
+        if (listProperties.data.isPrivate && ![Role.BUYER, Role.ADMIN].includes(user.roleId)) {
+            return fail(401, {
+                success: false,
+                error: $t("errors.not-authorized")
             });
         }
         if (listProperties.data.public && !config.allowPublicLists) {
@@ -94,6 +104,9 @@ export const actions: Actions = {
         if (!listProperties.data.public && config.listMode === "registry") {
             listProperties.data.public = true;
         }
+        if (listProperties.data.isPrivate) {
+            listProperties.data.public = false;
+        }
 
         let list;
         try {
@@ -102,6 +115,7 @@ export const actions: Actions = {
                 icon: trimToNull(listProperties.data.icon),
                 iconColor: trimToNull(listProperties.data.iconColor),
                 public: listProperties.data.public,
+                isPrivate: listProperties.data.isPrivate,
                 description: trimToNull(listProperties.data.description)
             };
             list = await create(user.id, activeMembership.groupId, data);

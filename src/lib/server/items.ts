@@ -4,20 +4,21 @@ import { toItemOnListDTO, type FullItem } from "$lib/dtos/item-mapper";
 
 export const ALL_ITEMS_PAGE_SIZE = 10;
 
-export const getAllItemsFilter = (groupId: string, userIdFilter: string[]) =>
+export const getAllItemsFilter = (groupId: string, userIdFilter: string[], privateOnly = false) =>
     ({
         lists: {
             some: {
                 approved: true,
                 list: {
                     groupId,
+                    isPrivate: privateOnly ? true : false,
                     ownerId: userIdFilter.length > 0 ? { in: userIdFilter } : undefined
-                }
+                } as any
             }
         }
     }) satisfies Prisma.ItemWhereInput;
 
-export const getAllItemsInclude = (groupId: string, userIdFilter: string[]) =>
+export const getAllItemsInclude = (groupId: string, userIdFilter: string[], privateOnly = false) =>
     ({
         lists: {
             select: {
@@ -27,7 +28,8 @@ export const getAllItemsInclude = (groupId: string, userIdFilter: string[]) =>
                 addedBy: {
                     select: {
                         id: true,
-                        name: true
+                        name: true,
+                        username: true
                     }
                 }
             },
@@ -35,8 +37,9 @@ export const getAllItemsInclude = (groupId: string, userIdFilter: string[]) =>
                 approved: true,
                 list: {
                     groupId,
+                    isPrivate: privateOnly ? true : false,
                     ownerId: userIdFilter.length > 0 ? { in: userIdFilter } : undefined
-                }
+                } as any
             }
         },
         claims: {
@@ -52,6 +55,7 @@ export const getAllItemsInclude = (groupId: string, userIdFilter: string[]) =>
                     select: {
                         id: true,
                         name: true,
+                        username: true,
                         UserGroupMembership: {
                             select: {
                                 groupId: true
@@ -68,8 +72,9 @@ export const getAllItemsInclude = (groupId: string, userIdFilter: string[]) =>
             },
             where: {
                 list: {
-                    groupId
-                }
+                    groupId,
+                    isPrivate: privateOnly ? true : false
+                } as any
             }
         },
         buyerNotes: {
@@ -80,7 +85,8 @@ export const getAllItemsInclude = (groupId: string, userIdFilter: string[]) =>
                 user: {
                     select: {
                         id: true,
-                        name: true
+                        name: true,
+                        username: true
                     }
                 }
             }
@@ -88,7 +94,8 @@ export const getAllItemsInclude = (groupId: string, userIdFilter: string[]) =>
         user: {
             select: {
                 id: true,
-                name: true
+                name: true,
+                username: true
             }
         },
         itemPrice: true,
@@ -103,15 +110,17 @@ export const getAllItemsPage = async ({
     groupId,
     userIdFilter,
     offset,
-    take = ALL_ITEMS_PAGE_SIZE
+    take = ALL_ITEMS_PAGE_SIZE,
+    privateOnly = false
 }: {
     groupId: string;
     userIdFilter: string[];
     offset: number;
     take?: number;
+    privateOnly?: boolean;
 }) => {
-    const where = getAllItemsFilter(groupId, userIdFilter);
-    const include = getAllItemsInclude(groupId, userIdFilter);
+    const where = getAllItemsFilter(groupId, userIdFilter, privateOnly);
+    const include = getAllItemsInclude(groupId, userIdFilter, privateOnly);
 
     const [totalCount, items] = await Promise.all([
         client.item.count({ where }),
@@ -134,6 +143,38 @@ export const getAllItemsPage = async ({
     };
 };
 
+export const getAllItemsFilterUsers = async ({
+    groupId,
+    privateOnly = false
+}: {
+    groupId: string;
+    privateOnly?: boolean;
+}) => {
+    return client.user.findMany({
+        where: {
+            lists: {
+                some: {
+                    groupId,
+                    isPrivate: privateOnly,
+                    items: {
+                        some: {
+                            approved: true
+                        }
+                    }
+                }
+            }
+        },
+        select: {
+            id: true,
+            name: true,
+            username: true
+        },
+        orderBy: {
+            username: "asc"
+        }
+    });
+};
+
 export const getItemInclusions = (listId?: string) => {
     return {
         lists: {
@@ -144,7 +185,8 @@ export const getItemInclusions = (listId?: string) => {
                 addedBy: {
                     select: {
                         id: true,
-                        name: true
+                        name: true,
+                        username: true
                     }
                 }
             },
@@ -165,6 +207,7 @@ export const getItemInclusions = (listId?: string) => {
                     select: {
                         id: true,
                         name: true,
+                        username: true,
                         UserGroupMembership: {
                             select: {
                                 groupId: true
@@ -188,7 +231,8 @@ export const getItemInclusions = (listId?: string) => {
                 user: {
                     select: {
                         id: true,
-                        name: true
+                        name: true,
+                        username: true
                     }
                 }
             }
@@ -196,7 +240,8 @@ export const getItemInclusions = (listId?: string) => {
         user: {
             select: {
                 id: true,
-                name: true
+                name: true,
+                username: true
             }
         },
         itemPrice: true,

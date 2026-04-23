@@ -1,6 +1,6 @@
 import type { Item, ItemPrice, SystemUser, User } from "$lib/generated/prisma/client";
 
-type MinimalUser = Pick<User, "id" | "name">;
+type MinimalUser = Pick<User, "id" | "name" | "username">;
 
 interface UserWithGroups extends MinimalUser {
     groups: string[];

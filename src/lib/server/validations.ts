@@ -97,6 +97,7 @@ export const getListPropertiesSchema = () => {
         icon: z.string().trim().nullable(),
         iconColor: z.string().trim().nullable(),
         public: z.coerce.boolean().default(false),
+        isPrivate: z.coerce.boolean().default(false),
         description: z.string().max(10000).nullable(),
         managers: z.string().array().nullable().default([])
     });
